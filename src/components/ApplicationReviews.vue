@@ -165,23 +165,25 @@ const getStageText = (stage: string): string => {
 
 const getResultText = (result: string): string => {
   const resultMap: Record<string, string> = {
-    'pending': '待审核',
-    'approved': '通过',
-    'rejected': '拒绝',
-    'doubt': '存疑'
+    'pending_initial': '待审核',
+    'initial_approved': '初审通过',
+    'under_review': '初审存疑',
+    'rejected': '审核退回',
+    'final_approved': '审核通过'
   }
   return resultMap[result] || result
 }
 
 const getResultType = (result: string): string => {
   switch (result) {
-    case 'approved':
+    case 'final_approved':
+    case 'initial_approved':
       return 'success'
     case 'rejected':
       return 'danger'
-    case 'doubt':
+    case 'under_review':
       return 'warning'
-    case 'pending':
+    case 'pending_initial':
     default:
       return 'info'
   }

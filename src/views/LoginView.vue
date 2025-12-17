@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-form">
       <div class="login-header">
-        <h2>王定国基金会管理后台</h2>
+        <h2>王定国公益基金会管理系统</h2>
       </div>
 
       <el-form

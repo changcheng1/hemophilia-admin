@@ -210,9 +210,9 @@ router.onError((error) => {
 // After each route change, update document title
 router.afterEach((to) => {
   if (to.meta.title) {
-    document.title = `${to.meta.title} - 王定国基金会管理后台`
+    document.title = `${to.meta.title} - 王定国公益基金会管理系统`
   } else {
-    document.title = '王定国基金会管理后台'
+    document.title = '王定国公益基金会管理系统'
   }
 })
 

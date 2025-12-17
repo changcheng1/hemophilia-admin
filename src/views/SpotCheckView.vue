@@ -189,7 +189,7 @@
         <el-tabs v-model="activeDetailTab" class="detail-tabs">
           <!-- 基本信息 -->
           <el-tab-pane label="基本信息" name="basic">
-            <BasicInfoForm
+            <BasicInfoDisplay
               v-model="applicationBasicInfo"
               :readonly="true"
             />
@@ -276,7 +276,7 @@ import { ElMessage } from 'element-plus'
 import { useApplicationStore } from '@/stores/application'
 import type { ApplicationListItem } from '@/types/application'
 import type { ApplicationReview } from '@/api/admin-application'
-import BasicInfoForm from '@/components/common/BasicInfoForm.vue'
+import BasicInfoDisplay from '@/components/common/BasicInfoDisplay.vue'
 import InvoiceUploadForm from '@/components/common/InvoiceUploadForm.vue'
 import FileUploadSection from '@/components/common/FileUploadSection.vue'
 import ApplicationReviews from '@/components/ApplicationReviews.vue'
@@ -349,7 +349,7 @@ const applicationBasicInfo = computed(() => {
       idType: '',
       idNumber: '',
       dateOfBirth: '',
-      idExpiryDate: '',
+
       householdLocation: '',
       medicalInsuranceLocation: '',
       treatmentLocation: '',
@@ -358,8 +358,7 @@ const applicationBasicInfo = computed(() => {
       guardianRelationship: '',
       guardianIdType: '',
       guardianIdNumber: '',
-      guardianPhone: '',
-      guardianAddress: '',
+
       bankAccountName: '',
       bankName: '',
       bankAccountNumber: '',
@@ -378,7 +377,7 @@ const applicationBasicInfo = computed(() => {
     idType: String(app.idType || ''),
     idNumber: String(app.idNumber || ''),
     dateOfBirth: String(app.dateOfBirth || ''),
-    idExpiryDate: String(app.idExpiryDate || ''),
+
     householdLocation: String(app.householdLocation || ''),
     medicalInsuranceLocation: String(app.medicalInsuranceLocation || ''),
     treatmentLocation: String(app.treatmentLocation || ''),
@@ -387,8 +386,7 @@ const applicationBasicInfo = computed(() => {
     guardianRelationship: String(app.guardianRelationship || ''),
     guardianIdType: String(app.guardianIdType || ''),
     guardianIdNumber: String(app.guardianIdNumber || ''),
-    guardianPhone: String(app.guardianPhone || ''),
-    guardianAddress: String(app.guardianAddress || ''),
+
     bankAccountName: String(app.bankAccountName || ''),
     bankName: String(app.bankName || ''),
     bankAccountNumber: String(app.bankAccountNumber || ''),
@@ -643,9 +641,6 @@ const executeRandomSpotCheck = async () => {
     
     // 直接设置应用列表为随机抽查结果
     applicationStore.setApplications(result.selectedApplications || [], result.selectedApplications?.length || 0)
-    
-    // 显示成功消息
-    ElMessage.success(`随机抽查完成，共选中 ${result.selectedApplications?.length || 0} 个申请`)
   } catch (error) {
     console.error('随机抽查失败:', error)
     ElMessage.error('随机抽查失败')

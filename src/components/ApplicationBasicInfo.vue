@@ -26,9 +26,7 @@
             <el-descriptions-item label="证件号码">
               {{ application.idNumber || '-' }}
             </el-descriptions-item>
-            <el-descriptions-item label="证件有效期">
-              {{ formatDate(application.idExpiryDate) }}
-            </el-descriptions-item>
+
           </el-descriptions>
         </el-card>
       </el-col>
@@ -86,15 +84,11 @@
             <el-descriptions-item label="证件号码">
               {{ application.guardianIdNumber || '-' }}
             </el-descriptions-item>
-            <el-descriptions-item label="联系电话">
-              {{ application.guardianPhone || '-' }}
-            </el-descriptions-item>
+
             <el-descriptions-item label="与患者关系">
               {{ application.guardianRelationship || '-' }}
             </el-descriptions-item>
-            <el-descriptions-item label="联系地址">
-              {{ application.guardianAddress || '-' }}
-            </el-descriptions-item>
+
           </el-descriptions>
         </el-card>
       </el-col>
@@ -185,7 +179,7 @@ interface Application {
   dateOfBirth?: string
   idType?: string
   idNumber?: string
-  idExpiryDate?: string
+
   householdLocation?: string
   residenceAddress?: string
   medicalInsuranceLocation?: string
@@ -195,9 +189,7 @@ interface Application {
   guardianName?: string
   guardianIdType?: string
   guardianIdNumber?: string
-  guardianPhone?: string
   guardianRelationship?: string
-  guardianAddress?: string
   applicationNumber?: string
   donationProject?: string
   donationPeriod?: string

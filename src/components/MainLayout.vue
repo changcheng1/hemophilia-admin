@@ -10,7 +10,7 @@
     <!-- Sidebar -->
     <el-aside :width="sidebarWidth" class="sidebar" :class="{ collapsed: isCollapsed }">
       <div class="logo">
-        <h2 v-if="!isCollapsed">王定国基金会管理后台</h2>
+        <h2 v-if="!isCollapsed">王定国公益基金会管理系统</h2>
         <h2 v-else class="logo-collapsed">援助</h2>
       </div>
 

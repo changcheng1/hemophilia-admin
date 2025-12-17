@@ -215,7 +215,7 @@
         <el-tabs v-model="activeDetailTab" class="detail-tabs">
           <!-- 基本信息 -->
           <el-tab-pane label="基本信息" name="basic">
-            <BasicInfoForm
+            <BasicInfoDisplay
               v-model="applicationBasicInfo"
               :readonly="true"
             />
@@ -316,9 +316,9 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
 
-import { Refresh, ArrowRight } from '@element-plus/icons-vue'
+import { Refresh } from '@element-plus/icons-vue'
 import { useApplicationStore } from '@/stores/application'
-import BasicInfoForm from '@/components/common/BasicInfoForm.vue'
+import BasicInfoDisplay from '@/components/common/BasicInfoDisplay.vue'
 import FileUploadSection from '@/components/common/FileUploadSection.vue'
 import InvoiceUploadForm from '@/components/common/InvoiceUploadForm.vue'
 import type { ApplicationListItem } from '@/types/application'
@@ -386,7 +386,7 @@ const applicationBasicInfo = computed(() => {
       idType: '',
       idNumber: '',
       dateOfBirth: '',
-      idExpiryDate: '',
+
       householdLocation: '',
       medicalInsuranceLocation: '',
       treatmentLocation: '',
@@ -395,8 +395,7 @@ const applicationBasicInfo = computed(() => {
       guardianRelationship: '',
       guardianIdType: '',
       guardianIdNumber: '',
-      guardianPhone: '',
-      guardianAddress: '',
+
       bankAccountName: '',
       bankName: '',
       bankAccountNumber: '',
@@ -415,7 +414,7 @@ const applicationBasicInfo = computed(() => {
     idType: String(app.idType || ''),
     idNumber: String(app.idNumber || ''),
     dateOfBirth: String(app.dateOfBirth || ''),
-    idExpiryDate: String(app.idExpiryDate || ''),
+
     householdLocation: String(app.householdLocation || ''),
     medicalInsuranceLocation: String(app.medicalInsuranceLocation || ''),
     treatmentLocation: String(app.treatmentLocation || ''),
@@ -424,8 +423,7 @@ const applicationBasicInfo = computed(() => {
     guardianRelationship: String(app.guardianRelationship || ''),
     guardianIdType: String(app.guardianIdType || ''),
     guardianIdNumber: String(app.guardianIdNumber || ''),
-    guardianPhone: String(app.guardianPhone || ''),
-    guardianAddress: String(app.guardianAddress || ''),
+
     bankAccountName: String(app.bankAccountName || ''),
     bankName: String(app.bankName || ''),
     bankAccountNumber: String(app.bankAccountNumber || ''),
@@ -436,13 +434,26 @@ const applicationBasicInfo = computed(() => {
 const applicationDocuments = computed(() => {
   if (!currentApplicationDetail.value?.files) return []
   
+  // 过滤掉发票类型的文件，只返回其他文档
   return currentApplicationDetail.value.files
-    .filter((file: Record<string, unknown>) => file.fileType !== 'invoice') // 过滤掉发票文件
-    .map((file: Record<string, unknown>, index: number) => ({
-      name: String(file.originalName || file.fileName || `文件${index + 1}`),
-      url: String(file.fileUrl || file.url || ''),
-      uid: Number(file.id) || index,
-      status: 'success'
+    .filter((file: Record<string, unknown>) => 
+      file.fileType !== 'transport_invoice' && 
+      file.fileType !== 'accommodation_invoice'
+    )
+    .map((file: Record<string, unknown>) => ({
+      id: Number(file.id) || undefined,
+      applicationId: Number(file.applicationId) || undefined,
+      fileType: String(file.fileType || ''),
+      originalName: String(file.originalName || ''),
+      filename: String(file.filename || ''),
+      path: String(file.path || ''),
+      url: String(file.url || ''),
+      mimetype: String(file.mimetype || ''),
+      size: String(file.size || ''),
+      createdAt: String(file.createdAt || ''),
+      // 兼容旧格式
+      name: String(file.originalName || ''),
+      uid: Number(file.id) || Date.now()
     }))
 })
 
@@ -457,28 +468,33 @@ const applicationInvoices = computed(() => {
   }
   
   const app = currentApplicationDetail.value
-  const invoiceFiles = app.files?.filter((file: Record<string, unknown>) => file.fileType === 'invoice') || []
   
-  // 根据文件名或其他标识分类发票文件
-  const transportFiles = invoiceFiles.filter((file: Record<string, unknown>) => {
-    const fileName = String(file.originalName || '')
-    return fileName.includes('交通') || fileName.includes('车票') || fileName.includes('火车')
-  }).map((file: Record<string, unknown>, index: number) => ({
-    name: String(file.originalName || file.fileName || `交通费发票${index + 1}`),
-    url: String(file.fileUrl || file.url || ''),
-    uid: String(file.id || `transport_${index}`),
-    status: 'success'
-  }))
+  // 根据 fileType 筛选交通费发票和住宿费发票
+  const transportFiles = (app.files || [])
+    .filter((file: Record<string, unknown>) => file.fileType === 'transport_invoice')
+    .map((file: Record<string, unknown>) => ({
+      id: file.id,
+      name: String(file.originalName || `交通费发票`),
+      url: String(file.url || ''),
+      uid: String(file.id || Date.now()),
+      status: 'success',
+      size: Number(file.size) || 0,
+      fileType: file.fileType,
+      originalName: file.originalName
+    }))
   
-  const accommodationFiles = invoiceFiles.filter((file: Record<string, unknown>) => {
-    const fileName = String(file.originalName || '')
-    return fileName.includes('住宿') || fileName.includes('酒店') || fileName.includes('宾馆')
-  }).map((file: Record<string, unknown>, index: number) => ({
-    name: String(file.originalName || file.fileName || `住宿费发票${index + 1}`),
-    url: String(file.fileUrl || file.url || ''),
-    uid: String(file.id || `accommodation_${index}`),
-    status: 'success'
-  }))
+  const accommodationFiles = (app.files || [])
+    .filter((file: Record<string, unknown>) => file.fileType === 'accommodation_invoice')
+    .map((file: Record<string, unknown>) => ({
+      id: file.id,
+      name: String(file.originalName || `住宿费发票`),
+      url: String(file.url || ''),
+      uid: String(file.id || Date.now()),
+      status: 'success',
+      size: Number(file.size) || 0,
+      fileType: file.fileType,
+      originalName: file.originalName
+    }))
   
   return {
     transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,

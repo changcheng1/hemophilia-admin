@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>环境变量测试</title>
+</head>
+<body>
+    <h1>环境变量测试</h1>
+    <p>当前时间: <span id="time"></span></p>
+    <p>测试结果: <span id="result"></span></p>
+    
+    <script type="module">
+        document.getElementById('time').textContent = new Date().toLocaleString();
+        
+        // 测试直接调用后端API
+        fetch('http://localhost:3000/auth/captcha')
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('result').textContent = '✅ 直接API调用成功';
+                    document.getElementById('result').style.color = 'green';
+                } else {
+                    document.getElementById('result').textContent = '❌ API调用失败: ' + response.status;
+                    document.getElementById('result').style.color = 'red';
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').textContent = '❌ API调用错误: ' + error.message;
+                document.getElementById('result').style.color = 'red';
+            });
+    </script>
+</body>
+</html>

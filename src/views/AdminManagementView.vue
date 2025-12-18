@@ -1,10 +1,5 @@
 <template>
   <div class="admin-management">
-    <div class="page-header">
-      <h1>管理员管理</h1>
-      <p class="page-description">管理系统中的管理员账户和权限</p>
-    </div>
-
     <!-- Search and Filter Section -->
     <el-card class="search-card" shadow="never">
       <el-row :gutter="20">
@@ -80,35 +75,34 @@
         stripe
         style="width: 100%"
       >
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="name" label="姓名" min-width="120" />
-        <el-table-column prop="phone" label="手机号" min-width="140" />
-        <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip />
-        <el-table-column label="角色" width="120">
+        <el-table-column prop="id" label="ID" />
+        <el-table-column prop="name" label="姓名"  />
+        <el-table-column prop="phone" label="手机号"  />
+        <el-table-column label="角色" >
           <template #default="{ row }">
             <el-tag :type="getRoleTagType(row.role)">
               {{ getRoleDisplayName(row.role) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
+        <el-table-column label="状态">
           <template #default="{ row }">
             <el-tag :type="row.isActive ? 'success' : 'danger'">
               {{ row.isActive ? '激活' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180">
+        <el-table-column prop="createdAt" label="创建时间" >
           <template #default="{ row }">
             {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column prop="lastLoginAt" label="最后登录" width="180">
+        <el-table-column prop="lastLoginAt" label="最后登录">
           <template #default="{ row }">
             {{ row.lastLoginAt ? formatDateTime(row.lastLoginAt) : '从未登录' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button
               type="primary"
@@ -118,27 +112,19 @@
               编辑
             </el-button>
             <el-button
-              type="info"
-              size="small"
-              @click="handleManageRole(row)"
-            >
-              角色权限
-            </el-button>
-            <el-button
               type="warning"
               size="small"
               @click="handleResetPassword(row)"
             >
-              重置密码
+              修改密码
             </el-button>
-            <el-popconfirm
-              title="确定要删除这个管理员吗？"
-              @confirm="handleDeleteAdmin(row)"
+            <el-button
+              :type="row.isActive ? 'danger' : 'success'"
+              size="small"
+              @click="handleToggleStatus(row)"
             >
-              <template #reference>
-                <el-button type="danger" size="small">删除</el-button>
-              </template>
-            </el-popconfirm>
+              {{ row.isActive ? '禁用' : '启用' }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -161,26 +147,37 @@
     <el-dialog
       v-model="createDialogVisible"
       title="新增管理员"
-      width="600px"
+      width="500px"
       @close="resetCreateForm"
     >
       <el-form
         ref="createFormRef"
         :model="createForm"
         :rules="createRules"
-        label-width="100px"
+        label-width="120px"
+        label-position="left"
       >
-        <el-form-item label="姓名" prop="name">
-          <el-input v-model="createForm.name" placeholder="请输入管理员姓名" />
+        <el-form-item label="*手机号:" prop="phone">
+          <el-input 
+            v-model="createForm.phone" 
+            placeholder="请输入手机号" 
+            clearable
+          />
         </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="createForm.phone" placeholder="请输入手机号" />
+        <el-form-item label="*姓名:" prop="name">
+          <el-input 
+            v-model="createForm.name" 
+            placeholder="请输入管理员姓名" 
+            clearable
+          />
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="createForm.email" placeholder="请输入邮箱地址" />
-        </el-form-item>
-        <el-form-item label="角色" prop="role">
-          <el-select v-model="createForm.role" placeholder="请选择角色" style="width: 100%">
+        <el-form-item label="角色:" prop="role">
+          <el-select 
+            v-model="createForm.role" 
+            placeholder="请选择角色" 
+            style="width: 100%"
+            clearable
+          >
             <el-option label="超级管理员" :value="UserRole.ADMIN" />
             <el-option label="业务管理员" :value="UserRole.BUSINESS_MANAGER" />
             <el-option label="初审管理员" :value="UserRole.INITIAL_REVIEWER" />
@@ -188,20 +185,21 @@
             <el-option label="财务管理员" :value="UserRole.FINANCE_MANAGER" />
           </el-select>
         </el-form-item>
-        <el-form-item label="初始密码" prop="password">
+        <el-form-item label="*初始密码:" prop="password">
           <el-input
             v-model="createForm.password"
             type="password"
             placeholder="请输入初始密码"
             show-password
+            clearable
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="createDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSaveAdmin">创建</el-button>
-        </span>
+        <div class="dialog-footer">
+          <el-button @click="createDialogVisible = false">关闭</el-button>
+          <el-button type="primary" @click="handleSaveAdmin">保存</el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -216,70 +214,33 @@
         ref="editFormRef"
         :model="editForm"
         :rules="editRules"
-        label-width="80px"
+        label-width="120px"
+        label-position="left"
       >
-        <el-form-item label="姓名" prop="name">
-          <el-input v-model="editForm.name" placeholder="请输入管理员姓名" />
+        <el-form-item label="手机号:">
+          <el-input 
+            :value="editForm.phone" 
+            disabled
+            placeholder="手机号"
+          />
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="editForm.email" placeholder="请输入邮箱地址" />
-        </el-form-item>
-        <el-form-item label="状态" prop="isActive">
-          <el-switch
-            v-model="editForm.isActive"
-            active-text="激活"
-            inactive-text="禁用"
+        <el-form-item label="*姓名:" prop="name">
+          <el-input 
+            v-model="editForm.name" 
+            placeholder="请输入管理员姓名" 
+            clearable
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="editDialogVisible = false">取消</el-button>
+        <div class="dialog-footer">
+          <el-button @click="editDialogVisible = false">关闭</el-button>
           <el-button type="primary" @click="handleUpdateAdmin">保存</el-button>
-        </span>
+        </div>
       </template>
     </el-dialog>
 
-    <!-- Role Management Dialog -->
-    <el-dialog
-      v-model="roleDialogVisible"
-      title="角色权限管理"
-      width="600px"
-      @close="resetRoleForm"
-    >
-      <el-form
-        ref="roleFormRef"
-        :model="roleForm"
-        label-width="100px"
-      >
-        <el-form-item label="管理员">
-          <span>{{ roleForm.adminName }}</span>
-        </el-form-item>
-        <el-form-item label="当前角色">
-          <el-select v-model="roleForm.role" placeholder="请选择角色" style="width: 100%">
-            <el-option label="超级管理员" :value="UserRole.ADMIN" />
-            <el-option label="业务管理员" :value="UserRole.BUSINESS_MANAGER" />
-            <el-option label="初审管理员" :value="UserRole.INITIAL_REVIEWER" />
-            <el-option label="复核管理员" :value="UserRole.FINAL_REVIEWER" />
-            <el-option label="财务管理员" :value="UserRole.FINANCE_MANAGER" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="权限列表">
-          <div class="permissions-list">
-            <div v-for="permission in roleForm.permissions" :key="permission.id" class="permission-item">
-              <el-tag>{{ permission.name }}</el-tag>
-              <span class="permission-desc">{{ permission.resource }}:{{ permission.action }}</span>
-            </div>
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="roleDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleUpdateRole">保存</el-button>
-        </span>
-      </template>
-    </el-dialog>
+
 
     <!-- Reset Password Dialog -->
     <el-dialog
@@ -330,7 +291,7 @@ import { ElMessageBox } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
 import { useUserStore } from '../stores/user'
 import { UserRole } from '../types'
-import type { AdminUserDetail, CreateAdminRequest, UpdateAdminRequest, Permission } from '../types'
+import type { AdminUserDetail, CreateAdminRequest, UpdateAdminRequest } from '../types'
 
 // Store
 const userStore = useUserStore()
@@ -343,20 +304,17 @@ const statusFilter = ref<boolean | undefined>(undefined)
 // Dialog states
 const createDialogVisible = ref(false)
 const editDialogVisible = ref(false)
-const roleDialogVisible = ref(false)
 const passwordDialogVisible = ref(false)
 
 // Form refs
 const createFormRef = ref()
 const editFormRef = ref()
-const roleFormRef = ref()
 const passwordFormRef = ref()
 
 // Create form
 const createForm = reactive({
   name: '',
   phone: '',
-  email: '',
   role: UserRole.INITIAL_REVIEWER,
   password: ''
 })
@@ -364,18 +322,11 @@ const createForm = reactive({
 // Edit form
 const editForm = reactive({
   id: 0,
-  name: '',
-  email: '',
-  isActive: true
+  phone: '',
+  name: ''
 })
 
-// Role form
-const roleForm = reactive({
-  id: 0,
-  adminName: '',
-  role: UserRole.INITIAL_REVIEWER,
-  permissions: [] as Permission[]
-})
+
 
 // Password form
 const passwordForm = reactive({
@@ -395,11 +346,8 @@ const createRules = {
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ],
-  email: [
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-  ],
   role: [
-    { required: true, message: '请选择角色', trigger: 'change' }
+    { required: false, message: '请选择角色', trigger: 'change' }
   ],
   password: [
     { required: true, message: '请输入初始密码', trigger: 'blur' },
@@ -411,9 +359,6 @@ const editRules = {
   name: [
     { required: true, message: '请输入管理员姓名', trigger: 'blur' },
     { min: 2, max: 20, message: '姓名长度在 2 到 20 个字符', trigger: 'blur' }
-  ],
-  email: [
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
   ]
 }
 
@@ -504,8 +449,7 @@ const handleSaveAdmin = async () => {
     const createData: CreateAdminRequest = {
       name: createForm.name,
       phone: createForm.phone,
-      email: createForm.email || undefined,
-      role: createForm.role,
+      role: createForm.role || UserRole.INITIAL_REVIEWER,
       password: createForm.password
     }
 
@@ -521,9 +465,8 @@ const handleSaveAdmin = async () => {
 
 const handleEditAdmin = (admin: AdminUserDetail) => {
   editForm.id = admin.id
+  editForm.phone = admin.phone
   editForm.name = admin.name
-  editForm.email = admin.email || ''
-  editForm.isActive = admin.isActive
   editDialogVisible.value = true
 }
 
@@ -534,9 +477,7 @@ const handleUpdateAdmin = async () => {
     await editFormRef.value.validate()
     
     const updateData: UpdateAdminRequest = {
-      name: editForm.name,
-      email: editForm.email || undefined,
-      isActive: editForm.isActive
+      name: editForm.name
     }
 
     const success = await userStore.updateAdmin(editForm.id, updateData)
@@ -549,21 +490,7 @@ const handleUpdateAdmin = async () => {
   }
 }
 
-const handleManageRole = (admin: AdminUserDetail) => {
-  roleForm.id = admin.id
-  roleForm.adminName = admin.name
-  roleForm.role = admin.role
-  roleForm.permissions = admin.permissions
-  roleDialogVisible.value = true
-}
 
-const handleUpdateRole = async () => {
-  const success = await userStore.updateAdminRole(roleForm.id, roleForm.role)
-  if (success) {
-    roleDialogVisible.value = false
-    resetRoleForm()
-  }
-}
 
 const handleResetPassword = (admin: AdminUserDetail) => {
   passwordForm.id = admin.id
@@ -589,11 +516,12 @@ const handleSavePassword = async () => {
   }
 }
 
-const handleDeleteAdmin = async (admin: AdminUserDetail) => {
+const handleToggleStatus = async (admin: AdminUserDetail) => {
+  const action = admin.isActive ? '禁用' : '启用'
   try {
     await ElMessageBox.confirm(
-      `确定要删除管理员 "${admin.name}" 吗？此操作不可恢复。`,
-      '确认删除',
+      `确定要${action}管理员 "${admin.name}" 吗？`,
+      `确认${action}`,
       {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
@@ -601,17 +529,18 @@ const handleDeleteAdmin = async (admin: AdminUserDetail) => {
       }
     )
 
-    await userStore.deleteAdmin(admin.id)
+    await userStore.toggleAdminStatus(admin.id, !admin.isActive)
   } catch {
     // User cancelled the operation
   }
 }
 
+
+
 // Reset form functions
 const resetCreateForm = () => {
   createForm.name = ''
   createForm.phone = ''
-  createForm.email = ''
   createForm.role = UserRole.INITIAL_REVIEWER
   createForm.password = ''
   
@@ -622,21 +551,15 @@ const resetCreateForm = () => {
 
 const resetEditForm = () => {
   editForm.id = 0
+  editForm.phone = ''
   editForm.name = ''
-  editForm.email = ''
-  editForm.isActive = true
   
   if (editFormRef.value) {
     editFormRef.value.clearValidate()
   }
 }
 
-const resetRoleForm = () => {
-  roleForm.id = 0
-  roleForm.adminName = ''
-  roleForm.role = UserRole.INITIAL_REVIEWER
-  roleForm.permissions = []
-}
+
 
 const resetPasswordForm = () => {
   passwordForm.id = 0
@@ -652,15 +575,10 @@ const resetPasswordForm = () => {
 // Lifecycle
 onMounted(async () => {
   await userStore.fetchAdmins()
-  await userStore.fetchRolePermissions()
 })
 </script>
 
 <style scoped>
-.admin-management {
-  padding: 20px;
-}
-
 .page-header {
   margin-bottom: 20px;
 }
@@ -703,29 +621,41 @@ onMounted(async () => {
 
 .pagination-wrapper {
   margin-top: 20px;
-  text-align: right;
+  display: flex;
+  justify-content: center;
 }
 
 .dialog-footer {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px 0 10px 0;
 }
 
-.permissions-list {
-  max-height: 200px;
-  overflow-y: auto;
+.dialog-footer .el-button {
+  min-width: 80px;
 }
 
-.permission-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 10px;
+:deep(.el-dialog__body) {
+  padding: 20px 20px 10px 20px;
 }
 
-.permission-desc {
-  color: #909399;
-  font-size: 12px;
+:deep(.el-form-item__label) {
+  font-weight: normal;
+  color: #606266;
 }
+
+:deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+
+:deep(.el-input__wrapper) {
+  border-radius: 4px;
+}
+
+:deep(.el-select .el-input__wrapper) {
+  border-radius: 4px;
+}
+
+
 </style>

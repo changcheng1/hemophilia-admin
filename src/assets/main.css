@@ -1,8 +1,58 @@
 @import './base.css';
 
+/* 防止移动端键盘弹出时页面滚动 */
+html, body {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+}
+
 #app {
-  width: 100vw;;
+  width: 100vw;
+  height: 100vh;
   font-weight: normal;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* 登录页面特殊处理 */
+.login-page {
+  overflow: hidden !important;
+  height: 100vh !important;
+}
+
+.login-page body {
+  overflow: hidden !important;
+}
+
+/* 输入框聚焦时防止页面跳动 */
+.el-input__wrapper {
+  transition: none !important;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .login-container {
+    padding: 10px !important;
+    align-items: flex-start !important;
+    padding-top: 10vh !important;
+  }
+  
+  .login-form {
+    width: 100% !important;
+    max-width: 350px !important;
+    padding: 30px 20px !important;
+  }
+}
+
+/* 防止iOS Safari地址栏变化导致的高度问题 */
+@supports (-webkit-touch-callout: none) {
+  .login-container {
+    height: -webkit-fill-available;
+    min-height: -webkit-fill-available;
+  }
 }
 
 a,

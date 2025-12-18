@@ -97,7 +97,6 @@ import {
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMenuStore } from '@/stores/menu'
-import { UserRole } from '@/types/auth'
 import BreadcrumbNav from './BreadcrumbNav.vue'
 
 const route = useRoute()
@@ -258,6 +257,19 @@ onUnmounted(() => {
 
 .user-dropdown {
   cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.user-dropdown:hover {
+  border: none;
+  outline: none;
+}
+
+.user-dropdown:focus {
+  border: none;
+  outline: none;
+  box-shadow: none;
 }
 
 .user-info {
@@ -268,6 +280,20 @@ onUnmounted(() => {
   border-radius: 6px;
   color: #606266;
   transition: all 0.3s ease;
+  border: none;
+  outline: none;
+}
+
+.user-info:hover {
+  background-color: #f5f7fa;
+  border: none;
+  outline: none;
+}
+
+.user-info:focus {
+  border: none;
+  outline: none;
+  box-shadow: none;
 }
 
 .user-avatar {
@@ -362,6 +388,39 @@ onUnmounted(() => {
   .user-role {
     display: none;
   }
+}
+
+/* 去除Element Plus dropdown的默认蓝色边框 */
+:deep(.el-dropdown) {
+  border: none !important;
+  outline: none !important;
+}
+
+:deep(.el-dropdown:hover) {
+  border: none !important;
+  outline: none !important;
+}
+
+:deep(.el-dropdown:focus) {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.el-dropdown .el-dropdown-link) {
+  border: none !important;
+  outline: none !important;
+}
+
+:deep(.el-dropdown .el-dropdown-link:hover) {
+  border: none !important;
+  outline: none !important;
+}
+
+:deep(.el-dropdown .el-dropdown-link:focus) {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Dark mode support (optional enhancement) */

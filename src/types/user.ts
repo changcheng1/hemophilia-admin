@@ -5,7 +5,6 @@ export interface User {
   id: number
   phone: string
   name: string
-  email?: string
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -20,14 +19,12 @@ export interface AdminUserDetail extends User {
 export interface CreateAdminRequest {
   phone: string
   name: string
-  email?: string
   role: UserRole
   password: string
 }
 
 export interface UpdateUserRequest {
   name?: string
-  email?: string
   isActive?: boolean
 }
 

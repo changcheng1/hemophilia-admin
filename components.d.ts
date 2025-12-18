@@ -18,9 +18,7 @@ declare module 'vue' {
     ApplicationReviews: typeof import('./src/components/ApplicationReviews.vue')['default']
     ApplicationTrendChart: typeof import('./src/components/charts/ApplicationTrendChart.vue')['default']
     BasicInfoDisplay: typeof import('./src/components/common/BasicInfoDisplay.vue')['default']
-    BasicInfoForm: typeof import('./src/components/common/BasicInfoForm.vue')['default']
     BreadcrumbNav: typeof import('./src/components/BreadcrumbNav.vue')['default']
-    ElAlert: typeof import('element-plus/es')['ElAlert']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElBreadcrumb: typeof import('element-plus/es')['ElBreadcrumb']
@@ -86,6 +84,7 @@ declare module 'vue' {
     StatusDistributionChart: typeof import('./src/components/charts/StatusDistributionChart.vue')['default']
     SuccessFeedback: typeof import('./src/components/SuccessFeedback.vue')['default']
     TheWelcome: typeof import('./src/components/TheWelcome.vue')['default']
+    UserApplicationsDialog: typeof import('./src/components/UserApplicationsDialog.vue')['default']
     WelcomeItem: typeof import('./src/components/WelcomeItem.vue')['default']
   }
   export interface GlobalDirectives {

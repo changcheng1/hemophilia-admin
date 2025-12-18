@@ -1,5 +1,5 @@
 <template>
-  <div class="login-container">
+  <div class="login-container login-page">
     <div class="login-form">
       <div class="login-header">
         <h2>王定国公益基金会管理系统</h2>
@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Phone, Lock, Picture } from '@element-plus/icons-vue'
@@ -175,9 +175,33 @@ const goToForgotPassword = () => {
   router.push('/forgot-password')
 }
 
+// 防止iOS Safari在输入框聚焦时页面滚动
+const preventScroll = (e: Event) => {
+  const target = e.target as HTMLElement
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+    // 延迟执行，确保键盘弹出后再滚动到顶部
+    setTimeout(() => {
+      window.scrollTo(0, 0)
+      document.body.scrollTop = 0
+    }, 100)
+  }
+}
+
 // 页面加载时获取验证码
 onMounted(() => {
   getCaptcha()
+  
+  // 添加登录页面类到body
+  document.body.classList.add('login-page')
+  
+  // 添加事件监听
+  document.addEventListener('focusin', preventScroll)
+})
+
+// 组件卸载时清理
+onUnmounted(() => {
+  document.body.classList.remove('login-page')
+  document.removeEventListener('focusin', preventScroll)
 })
 </script>
 
@@ -192,15 +216,21 @@ onMounted(() => {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .login-form {
-  width: 400px;
-  height: 400px;
+  width: 100%;
+  max-width: 400px;
+  min-height: 400px;
   padding: 40px;
   background: white;
   border-radius: 10px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  position: relative;
 }
 
 .login-header {
@@ -291,5 +321,35 @@ onMounted(() => {
 
 .captcha-placeholder .el-icon {
   font-size: 16px;
+}
+
+/* 防止输入框聚焦时页面跳动 */
+.login-form-content .el-form-item {
+  margin-bottom: 20px;
+}
+
+.login-form-content .el-input {
+  transition: none;
+}
+
+.login-form-content .el-input__wrapper {
+  transition: none !important;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .login-form {
+    margin-top: 0;
+  }
+  
+  .captcha-container {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .captcha-image {
+    width: 100%;
+    height: 50px;
+  }
 }
 </style>

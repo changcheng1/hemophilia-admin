@@ -98,7 +98,7 @@ http.interceptors.response.use(
     // Handle backend unified response format
     if (response.data && typeof response.data === 'object' && 'code' in response.data) {
       // Backend returns: { code: 200, message: "success", data: {...} }
-      if (response.data.code === 200) {
+      if (String(response.data.code).startsWith('2')) {
         // Success response - return the actual data
         response.data = response.data.data
       } else {

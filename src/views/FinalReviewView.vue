@@ -100,14 +100,6 @@
       <template #header>
         <div class="card-header">
           <span>复核申请列表</span>
-          <el-button 
-            type="primary" 
-            @click="refreshList" 
-            :icon="Refresh"
-            :loading="loading"
-          >
-            刷新
-          </el-button>
         </div>
       </template>
 
@@ -118,30 +110,30 @@
         style="width: 100%"
         class="review-table"
       >
-        <el-table-column prop="applicationNumber" label="申请号" width="140" />
-        <el-table-column prop="donationProject" label="援助项目" width="120" />
-        <el-table-column prop="donationPeriod" label="援助期数" width="100" />
-        <el-table-column prop="phone" label="手机号" width="120">
+        <el-table-column prop="applicationNumber" label="申请号" show-overflow-tooltip/>
+        <el-table-column prop="donationProject" label="援助项目" />
+        <el-table-column prop="donationPeriod" label="援助期数" />
+        <el-table-column prop="phone" label="手机号">
           <template #default="{ row }">
             {{ row.user?.phone || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="recipientName" label="患者姓名" width="100" />
-        <el-table-column prop="idType" label="证件类型" width="100" />
-        <el-table-column prop="idNumber" label="证件号码" width="160" />
-        <el-table-column prop="status" label="申请状态" width="120">
+        <el-table-column prop="recipientName" label="患者姓名" />
+        <el-table-column prop="idType" label="证件类型"/>
+        <el-table-column prop="idNumber" label="证件号码" />
+        <el-table-column prop="status" label="申请状态" >
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="申请时间" width="160">
+        <el-table-column prop="createdAt" label="申请时间">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
               <!-- 需要复核的状态 - 显示复核按钮 -->
@@ -264,7 +256,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
+
 import { useApplicationStore } from '@/stores/application'
 import type { ApplicationListItem } from '@/types/application'
 import type { ApplicationReview } from '@/api/admin-application'
@@ -508,9 +500,7 @@ const handleReset = () => {
   fetchFinalReviewApplications()
 }
 
-const refreshList = () => {
-  fetchFinalReviewApplications()
-}
+
 
 const handleSizeChange = (size: number) => {
   pageSize.value = size
@@ -544,11 +534,9 @@ const fetchFinalReviewApplications = () => {
   // 复核管理页面查询逻辑
   if (searchForm.status) {
     params.status = searchForm.status
-    console.log('🔍 复核管理 - 使用单一状态查询:', searchForm.status)
   } else {
     // 默认查询复核相关的状态：初审通过、初审存疑、审核通过、审核退回
     params.reviewableStatuses = ['initial_approved', 'under_review', 'final_approved', 'rejected']
-    console.log('🔍 复核管理 - 使用多状态查询:', params.reviewableStatuses)
   }
   
   if (searchForm.dateRange && searchForm.dateRange.length === 2) {
@@ -556,18 +544,13 @@ const fetchFinalReviewApplications = () => {
     params.endDate = searchForm.dateRange[1]
   }
   
-  console.log('🔍 复核管理页面查询参数:', params)
-  console.log('🔍 当前搜索表单状态:', searchForm.status)
   
   // 使用管理员搜索接口
   applicationStore.searchApplications(params).then(() => {
-    console.log('🔍 查询完成，结果数量:', applications.value.length)
-    console.log('🔍 查询结果状态分布:', 
       applications.value.reduce((acc, app) => {
         acc[app.status] = (acc[app.status] || 0) + 1
         return acc
       }, {} as Record<string, number>)
-    )
   })
 }
 
@@ -576,17 +559,9 @@ const openReviewDialog = async (application: ApplicationListItem) => {
   submitting.value = true
   
   try {
-    console.log(`🔍 正在查询申请详情: ID=${application.id}, 申请号=${application.applicationNumber}`)
     
     // 使用管理员API根据申请ID查询完整的申请信息
     const detail = await applicationStore.fetchAdminApplicationDetail(application.id)
-    
-    console.log('✅ 申请详情查询成功:', {
-      applicationNumber: detail.applicationNumber,
-      recipientName: detail.recipientName,
-      status: detail.status,
-      filesCount: detail.files?.length || 0
-    })
     
     // 转换文件数据格式以匹配前端组件期望的格式
     if (detail.files && detail.files.length > 0) {
@@ -620,12 +595,6 @@ const handleReviewSubmitted = async (result: 'approve' | 'reject', comment: stri
   if (!selectedApplication.value) return
   
   try {
-    console.log('🔍 提交复核意见:', {
-      id: selectedApplication.value.id,
-      result: result,
-      comment: comment
-    })
-    
     // 使用复核接口
     await applicationStore.finalReview(
       selectedApplication.value.id, 
@@ -664,10 +633,8 @@ const handleReviewSubmitted = async (result: 'approve' | 'reject', comment: stri
 const fetchApplicationReviews = async (applicationId: number) => {
   loadingReviews.value = true
   try {
-    console.log(`🔍 正在获取申请 ${applicationId} 的审核记录`)
     const reviews = await applicationStore.getApplicationReviews(applicationId)
     applicationReviews.value = reviews || []
-    console.log('✅ 审核记录获取成功:', reviews?.length || 0, '条记录')
   } catch (error) {
     console.error('❌ 获取审核记录失败:', error)
     applicationReviews.value = []

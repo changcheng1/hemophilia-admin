@@ -118,38 +118,27 @@
         style="width: 100%"
         class="spot-check-table"
       >
-        <el-table-column prop="applicationNumber" label="申请号" width="140" />
-        <el-table-column prop="donationProject" label="援助项目" width="120" />
-        <el-table-column prop="donationPeriod" label="援助期数" width="100" />
-        <el-table-column prop="phone" label="手机号" width="120">
+        <el-table-column prop="applicationNumber" label="申请号" show-overflow-tooltip/>
+        <el-table-column prop="donationProject" label="援助项目"/>
+        <el-table-column prop="donationPeriod" label="援助期数" />
+        <el-table-column prop="phone" label="手机号">
           <template #default="{ row }">
             {{ row.user?.phone || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="recipientName" label="患者姓名" width="100" />
-        <el-table-column prop="idType" label="证件类型" width="100" />
-        <el-table-column prop="idNumber" label="证件号码" width="160" />
-        <el-table-column prop="status" label="申请状态" width="120">
+        <el-table-column prop="recipientName" label="患者姓名" />
+        <el-table-column prop="idType" label="证件类型"  />
+        <el-table-column prop="idNumber" label="证件号码" />
+        <el-table-column prop="status" label="申请状态">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
               {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="申请时间" width="160">
+        <el-table-column prop="createdAt" label="申请时间" >
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="100">
-          <template #default="{ row }">
-            <el-button
-              type="primary"
-              size="small"
-              @click="openSpotCheck(row)"
-            >
-              审核
-            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -572,11 +561,9 @@ const fetchSpotCheckApplications = () => {
   // 抽查管理页面查询逻辑
   if (searchForm.status) {
     params.status = searchForm.status
-    console.log('🔍 抽查管理 - 使用单一状态查询:', searchForm.status)
   } else {
     // 默认查询审核通过的申请（可以进行抽查的）
     params.status = 'final_approved'
-    console.log('🔍 抽查管理 - 默认查询审核通过申请')
   }
   
   if (searchForm.dateRange && searchForm.dateRange.length === 2) {
@@ -584,11 +571,9 @@ const fetchSpotCheckApplications = () => {
     params.endDate = searchForm.dateRange[1]
   }
   
-  console.log('🔍 抽查管理页面查询参数:', params)
   
   // 使用管理员搜索接口
   applicationStore.searchApplications(params).then(() => {
-    console.log('🔍 查询完成，结果数量:', applications.value.length)
   })
 }
 
@@ -600,10 +585,8 @@ const fetchSpotCheckApplications = () => {
 const fetchApplicationReviews = async (applicationId: number) => {
   loadingReviews.value = true
   try {
-    console.log(`🔍 正在获取申请 ${applicationId} 的审核记录`)
     const reviews = await applicationStore.getApplicationReviews(applicationId)
     applicationReviews.value = reviews || []
-    console.log('✅ 审核记录获取成功:', reviews?.length || 0, '条记录')
   } catch (error) {
     console.error('❌ 获取审核记录失败:', error)
     applicationReviews.value = []
@@ -648,47 +631,6 @@ const executeRandomSpotCheck = async () => {
     randomSelecting.value = false
   }
 }
-
-// 打开单个申请抽查
-const openSpotCheck = async (application: ApplicationListItem) => {
-  selectedApplication.value = application
-  
-  try {
-    console.log(`🔍 正在查询申请详情: ID=${application.id}, 申请号=${application.applicationNumber}`)
-    
-    // 使用管理员API根据申请ID查询完整的申请信息
-    const detail = await applicationStore.fetchAdminApplicationDetail(application.id)
-    
-    console.log('✅ 申请详情查询成功:', {
-      applicationNumber: detail.applicationNumber,
-      recipientName: detail.recipientName,
-      status: detail.status,
-      filesCount: detail.files?.length || 0
-    })
-    
-    // 转换文件数据格式以匹配前端组件期望的格式
-    if (detail.files && detail.files.length > 0) {
-      detail.files = detail.files.map((file: Record<string, unknown>) => ({
-        ...file,
-        fileUrl: file.url || file.path || '',
-        fileSize: file.size || 0
-      }))
-    }
-    
-    currentApplicationDetail.value = detail as ApplicationDetail
-    
-    // 获取审核记录
-    await fetchApplicationReviews(application.id)
-    
-    spotCheckDialogVisible.value = true
-    activeDetailTab.value = 'basic'
-
-  } catch (error) {
-    console.error('❌ 获取申请详情失败:', error)
-    ElMessage.error('获取申请详情失败，请稍后重试')
-  }
-}
-
 // 清除随机抽查结果，返回完整列表
 const clearRandomResults = () => {
   showingRandomResults.value = false

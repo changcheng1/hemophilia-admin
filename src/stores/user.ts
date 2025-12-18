@@ -11,11 +11,11 @@ import type {
   RolePermissionConfig
 } from '@/types'
 import { UserRole } from '@/types'
-import { userApi, adminApi } from '@/api/user'
+import { userApi, adminApi, type DonationUser } from '@/api/user'
 
 export const useUserStore = defineStore('user', () => {
   // State
-  const users = ref<User[]>([])
+  const users = ref<DonationUser[]>([])
   const admins = ref<AdminUserDetail[]>([])
   const rolePermissions = ref<RolePermissionConfig[]>([])
   const loading = ref(false)
@@ -24,9 +24,9 @@ export const useUserStore = defineStore('user', () => {
   const currentPage = ref(1)
   const pageSize = ref(10)
 
-  // Getters
-  const activeUsers = computed(() => users.value.filter(user => user.isActive))
-  const inactiveUsers = computed(() => users.value.filter(user => !user.isActive))
+  // Getters  
+  const activeUsers = computed(() => users.value.filter(user => true)) // DonationUser doesn't have isActive
+  const inactiveUsers = computed(() => users.value.filter(user => false)) // DonationUser doesn't have isActive
   const adminsByRole = computed(() => {
     const grouped: Record<UserRole, AdminUserDetail[]> = {
       [UserRole.ADMIN]: [],
@@ -55,9 +55,9 @@ export const useUserStore = defineStore('user', () => {
         ...query
       })
       
-      users.value = response.users
-      totalUsers.value = response.total
-      currentPage.value = response.page
+      users.value = response.data.data
+      totalUsers.value = response.data.total
+      currentPage.value = response.data.page
     } catch (error) {
       ElMessage.error('获取用户列表失败')
       console.error('Failed to fetch users:', error)
@@ -75,9 +75,9 @@ export const useUserStore = defineStore('user', () => {
         ...query
       })
       
-      admins.value = response.admins
-      totalAdmins.value = response.total
-      currentPage.value = response.page
+      admins.value = response.data.data
+      totalAdmins.value = response.data.total
+      currentPage.value = response.data.page
     } catch (error) {
       ElMessage.error('获取管理员列表失败')
       console.error('Failed to fetch admins:', error)
@@ -88,14 +88,15 @@ export const useUserStore = defineStore('user', () => {
 
   const fetchRolePermissions = async () => {
     try {
-      rolePermissions.value = await adminApi.getRolePermissions()
+      const response = await adminApi.getRolePermissions()
+      rolePermissions.value = response.data
     } catch (error) {
       ElMessage.error('获取角色权限配置失败')
       console.error('Failed to fetch role permissions:', error)
     }
   }
 
-  const getUserById = async (id: number): Promise<User | null> => {
+  const getUserById = async (id: number): Promise<DonationUser | null> => {
     try {
       return await userApi.getUserById(id)
     } catch (error) {
@@ -107,7 +108,8 @@ export const useUserStore = defineStore('user', () => {
 
   const getAdminById = async (id: number): Promise<AdminUserDetail | null> => {
     try {
-      return await adminApi.getAdminById(id)
+      const response = await adminApi.getAdminById(id)
+      return response.data
     } catch (error) {
       ElMessage.error('获取管理员信息失败')
       console.error('Failed to get admin:', error)
@@ -136,10 +138,10 @@ export const useUserStore = defineStore('user', () => {
 
   const createAdmin = async (data: CreateAdminRequest): Promise<boolean> => {
     try {
-      const newAdmin = await adminApi.createAdmin(data)
+      const response = await adminApi.createAdmin(data)
       
       // Add to local state
-      admins.value.unshift(newAdmin)
+      admins.value.unshift(response.data)
       totalAdmins.value += 1
       
       ElMessage.success('管理员创建成功')
@@ -153,12 +155,12 @@ export const useUserStore = defineStore('user', () => {
 
   const updateAdmin = async (id: number, data: UpdateAdminRequest): Promise<boolean> => {
     try {
-      const updatedAdmin = await adminApi.updateAdmin(id, data)
+      const response = await adminApi.updateAdmin(id, data)
       
       // Update local state
       const index = admins.value.findIndex(admin => admin.id === id)
       if (index !== -1) {
-        admins.value[index] = updatedAdmin
+        admins.value[index] = response.data
       }
       
       ElMessage.success('管理员信息更新成功')
@@ -172,15 +174,13 @@ export const useUserStore = defineStore('user', () => {
 
   const updateAdminRole = async (id: number, role: UserRole, permissions?: string[]): Promise<boolean> => {
     try {
-      const updatedAdmin = await adminApi.updateAdminRole(id, role, permissions)
+      const response = await adminApi.updateAdminRole(id, role, permissions)
       
       // Update local state
       const index = admins.value.findIndex(admin => admin.id === id)
       if (index !== -1) {
-        admins.value[index] = updatedAdmin
+        admins.value[index] = response.data
       }
-      
-      ElMessage.success('管理员角色更新成功')
       return true
     } catch (error) {
       ElMessage.error('更新管理员角色失败')
@@ -221,6 +221,25 @@ export const useUserStore = defineStore('user', () => {
     } catch (error) {
       ElMessage.error('删除用户失败')
       console.error('Failed to delete user:', error)
+      return false
+    }
+  }
+
+  const toggleAdminStatus = async (id: number, isActive: boolean): Promise<boolean> => {
+    try {
+      const response = await adminApi.toggleAdminStatus(id, isActive)
+      
+      // Update local state
+      const index = admins.value.findIndex(admin => admin.id === id)
+      if (index !== -1) {
+        admins.value[index] = response.data
+      }
+      
+      ElMessage.success(`管理员已${isActive ? '激活' : '禁用'}`)
+      return true
+    } catch (error) {
+      ElMessage.error(`${isActive ? '激活' : '禁用'}管理员失败`)
+      console.error('Failed to toggle admin status:', error)
       return false
     }
   }
@@ -290,6 +309,7 @@ export const useUserStore = defineStore('user', () => {
     updateAdmin,
     updateAdminRole,
     toggleUserStatus,
+    toggleAdminStatus,
     deleteUser,
     deleteAdmin,
     resetAdminPassword,

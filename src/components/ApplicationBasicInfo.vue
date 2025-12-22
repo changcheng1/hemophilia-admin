@@ -208,7 +208,8 @@ interface Props {
 
 defineProps<Props>()
 
-const getGenderText = (gender: string): string => {
+const getGenderText = (gender: string | undefined): string => {
+  if (!gender) return '-'
   const genderMap: Record<string, string> = {
     'male': '男',
     'female': '女'
@@ -216,7 +217,8 @@ const getGenderText = (gender: string): string => {
   return genderMap[gender] || '-'
 }
 
-const getStatusType = (status: string): string => {
+const getStatusType = (status: string | undefined): string => {
+  if (!status) return 'info'
   switch (status) {
     case 'pending_initial':
     case 'under_review':
@@ -231,7 +233,8 @@ const getStatusType = (status: string): string => {
   }
 }
 
-const getStatusText = (status: string): string => {
+const getStatusText = (status: string | undefined): string => {
+  if (!status) return '-'
   const statusMap: Record<string, string> = {
     'pending_initial': '待审核',
     'under_review': '初审存疑',
@@ -242,12 +245,12 @@ const getStatusText = (status: string): string => {
   return statusMap[status] || '未知状态'
 }
 
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string | undefined): string => {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleDateString('zh-CN')
 }
 
-const formatDateTime = (dateString: string): string => {
+const formatDateTime = (dateString: string | undefined): string => {
   if (!dateString) return '-'
   return new Date(dateString).toLocaleString('zh-CN')
 }

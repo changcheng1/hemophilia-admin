@@ -10,7 +10,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import * as echarts from 'echarts'
-import type { DashboardStats } from '@/types'
+import type { DashboardStats } from '@/types/dashboard'
 
 interface Props {
   stats: DashboardStats

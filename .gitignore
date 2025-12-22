@@ -34,3 +34,10 @@ coverage
 
 # Vitest
 __screenshots__/
+
+# PM2
+.pm2/
+ecosystem.config.js.backup
+
+# Upload
+upload.log

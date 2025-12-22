@@ -394,11 +394,14 @@ const applicationDocuments = computed(() => {
   ) || []
   
   return documentFiles.map((file: Record<string, unknown>, index: number) => ({
-    name: String(file.originalName || file.fileName || `申请资料${index + 1}`),
+    fileType: String(file.fileType || 'document'),
+    originalName: String(file.originalName || file.fileName || `申请资料${index + 1}`),
     url: String(file.fileUrl || file.url || ''),
     uid: String(file.id || `document_${index}`),
     status: 'success',
-    size: Number(file.fileSize || file.size || 0)
+    size: Number(file.fileSize || file.size || 0),
+    // 兼容旧格式
+    name: String(file.originalName || file.fileName || `申请资料${index + 1}`)
   }))
 })
 

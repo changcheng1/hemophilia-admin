@@ -228,7 +228,7 @@ const dimensionLabels = {
 }
 
 // 反向映射：从中文标签到英文键值
-const labelToDimension = {
+const labelToDimension: Record<string, string> = {
   '受捐者区域': 'recipient',
   '常住地址': 'residence',
   '医保所在地': 'medical',
@@ -288,7 +288,7 @@ const handleDateRangeChange = (dates: [string, string] | null): void => {
 
 const handleDimensionLabelChange = (label: string): void => {
   selectedDimensionLabel.value = label
-  const dimension = labelToDimension[label] || 'recipient'
+  const dimension = (labelToDimension as Record<string, string>)[label] || 'recipient'
   dashboardStore.fetchProvinceData(activeTab.value, dateRange.value, dimension)
 }
 

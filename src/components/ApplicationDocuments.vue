@@ -16,14 +16,14 @@
               <div class="document-content">
                 <div v-if="getDocumentByType('id_card_front')" class="file-item">
                   <el-image
-                    :src="getDocumentByType('id_card_front').fileUrl"
-                    :preview-src-list="[getDocumentByType('id_card_front').fileUrl]"
+                    :src="getDocumentByType('id_card_front')?.fileUrl"
+                    :preview-src-list="[getDocumentByType('id_card_front')?.fileUrl].filter(Boolean)"
                     fit="cover"
                     class="document-image"
                   />
                   <div class="file-info">
-                    <div class="file-name">{{ getDocumentByType('id_card_front').originalName }}</div>
-                    <div class="file-size">{{ formatFileSize(getDocumentByType('id_card_front').fileSize) }}</div>
+                    <div class="file-name">{{ getDocumentByType('id_card_front')?.originalName }}</div>
+                    <div class="file-size">{{ formatFileSize(getDocumentByType('id_card_front')?.fileSize || 0) }}</div>
                   </div>
                 </div>
                 <div v-else class="no-file">未上传</div>
@@ -35,14 +35,14 @@
               <div class="document-content">
                 <div v-if="getDocumentByType('id_card_back')" class="file-item">
                   <el-image
-                    :src="getDocumentByType('id_card_back').fileUrl"
-                    :preview-src-list="[getDocumentByType('id_card_back').fileUrl]"
+                    :src="getDocumentByType('id_card_back')?.fileUrl"
+                    :preview-src-list="[getDocumentByType('id_card_back')?.fileUrl].filter(Boolean)"
                     fit="cover"
                     class="document-image"
                   />
                   <div class="file-info">
-                    <div class="file-name">{{ getDocumentByType('id_card_back').originalName }}</div>
-                    <div class="file-size">{{ formatFileSize(getDocumentByType('id_card_back').fileSize) }}</div>
+                    <div class="file-name">{{ getDocumentByType('id_card_back')?.originalName }}</div>
+                    <div class="file-size">{{ formatFileSize(getDocumentByType('id_card_back')?.fileSize || 0) }}</div>
                   </div>
                 </div>
                 <div v-else class="no-file">未上传</div>
@@ -67,14 +67,14 @@
               <div class="document-content">
                 <div v-if="getDocumentByType('medical_record')" class="file-item">
                   <el-image
-                    :src="getDocumentByType('medical_record').fileUrl"
-                    :preview-src-list="[getDocumentByType('medical_record').fileUrl]"
+                    :src="getDocumentByType('medical_record')?.fileUrl"
+                    :preview-src-list="[getDocumentByType('medical_record')?.fileUrl].filter(Boolean)"
                     fit="cover"
                     class="document-image"
                   />
                   <div class="file-info">
-                    <div class="file-name">{{ getDocumentByType('medical_record').originalName }}</div>
-                    <div class="file-size">{{ formatFileSize(getDocumentByType('medical_record').fileSize) }}</div>
+                    <div class="file-name">{{ getDocumentByType('medical_record')?.originalName }}</div>
+                    <div class="file-size">{{ formatFileSize(getDocumentByType('medical_record')?.fileSize || 0) }}</div>
                   </div>
                 </div>
                 <div v-else class="no-file">未上传</div>
@@ -86,14 +86,14 @@
               <div class="document-content">
                 <div v-if="getDocumentByType('examination_report')" class="file-item">
                   <el-image
-                    :src="getDocumentByType('examination_report').fileUrl"
-                    :preview-src-list="[getDocumentByType('examination_report').fileUrl]"
+                    :src="getDocumentByType('examination_report')?.fileUrl"
+                    :preview-src-list="[getDocumentByType('examination_report')?.fileUrl].filter(Boolean)"
                     fit="cover"
                     class="document-image"
                   />
                   <div class="file-info">
-                    <div class="file-name">{{ getDocumentByType('examination_report').originalName }}</div>
-                    <div class="file-size">{{ formatFileSize(getDocumentByType('examination_report').fileSize) }}</div>
+                    <div class="file-name">{{ getDocumentByType('examination_report')?.originalName }}</div>
+                    <div class="file-size">{{ formatFileSize(getDocumentByType('examination_report')?.fileSize || 0) }}</div>
                   </div>
                 </div>
                 <div v-else class="no-file">未上传</div>

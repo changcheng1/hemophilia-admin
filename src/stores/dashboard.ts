@@ -14,6 +14,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
     totalAmount: 0,
     averageApplications: 0,
     averageAmount: 0,
+    pendingReview: 0,
+    approvedApplications: 0,
+    rejectedApplications: 0,
   })
   
   const provinceData = ref<ProvinceData[]>([])
@@ -51,6 +54,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
         totalAmount: 0,
         averageApplications: 0,
         averageAmount: 0,
+        pendingReview: 0,
+        approvedApplications: 0,
+        rejectedApplications: 0,
       }
       
       lastUpdated.value = new Date()

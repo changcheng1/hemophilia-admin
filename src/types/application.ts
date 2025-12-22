@@ -9,24 +9,45 @@ export interface ApplicationListItem {
 }
 
 export enum ApplicationStatus {
+  /** 草稿 */
+  DRAFT = 'draft',
+  /** 已提交 */
+  SUBMITTED = 'submitted',
   /** 待审核 */
   PENDING_INITIAL = 'pending_initial',
+  /** 初审中 */
+  INITIAL_REVIEW = 'initial_review',
   /** 初审存疑 */
   UNDER_REVIEW = 'under_review',
   /** 初审通过 */
   INITIAL_APPROVED = 'initial_approved',
+  /** 复审中 */
+  FINAL_REVIEW = 'final_review',
   /** 审核通过 */
   FINAL_APPROVED = 'final_approved',
+  /** 已完成 */
+  COMPLETED = 'completed',
+  /** 初审退回 */
+  INITIAL_REJECTED = 'initial_rejected',
+  /** 复审退回 */
+  FINAL_REJECTED = 'final_rejected',
   /** 审核退回 */
   REJECTED = 'rejected',
 }
 
 // 状态标签映射
 export const ApplicationStatusLabels = {
+  [ApplicationStatus.DRAFT]: '草稿',
+  [ApplicationStatus.SUBMITTED]: '已提交',
   [ApplicationStatus.PENDING_INITIAL]: '待审核',
+  [ApplicationStatus.INITIAL_REVIEW]: '初审中',
   [ApplicationStatus.UNDER_REVIEW]: '初审存疑',
   [ApplicationStatus.INITIAL_APPROVED]: '初审通过',
+  [ApplicationStatus.FINAL_REVIEW]: '复审中',
   [ApplicationStatus.FINAL_APPROVED]: '审核通过',
+  [ApplicationStatus.COMPLETED]: '已完成',
+  [ApplicationStatus.INITIAL_REJECTED]: '初审退回',
+  [ApplicationStatus.FINAL_REJECTED]: '复审退回',
   [ApplicationStatus.REJECTED]: '审核退回',
 }
 

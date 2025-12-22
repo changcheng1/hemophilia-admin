@@ -183,12 +183,19 @@ const getStatusType = (status: ApplicationStatus): string => {
 }
 
 const getStatusText = (status: ApplicationStatus): string => {
-  const statusMap = {
+  const statusMap: Record<ApplicationStatus, string> = {
     [ApplicationStatus.PENDING_INITIAL]: '待审核',
     [ApplicationStatus.INITIAL_APPROVED]: '初审通过',
     [ApplicationStatus.UNDER_REVIEW]: '初审存疑',
     [ApplicationStatus.REJECTED]: '审核退回',
-    [ApplicationStatus.FINAL_APPROVED]: '审核通过'
+    [ApplicationStatus.FINAL_APPROVED]: '审核通过',
+    [ApplicationStatus.DRAFT]: '草稿',
+    [ApplicationStatus.SUBMITTED]: '已提交',
+    [ApplicationStatus.INITIAL_REVIEW]: '初审中',
+    [ApplicationStatus.INITIAL_REJECTED]: '初审拒绝',
+    [ApplicationStatus.FINAL_REVIEW]: '复审中',
+    [ApplicationStatus.FINAL_REJECTED]: '复审拒绝',
+    [ApplicationStatus.COMPLETED]: '已完成'
   }
   return statusMap[status] || '未知状态'
 }

@@ -14,7 +14,7 @@ declare module 'axios' {
 
 // Create axios instance
 const http: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -103,7 +103,7 @@ http.interceptors.response.use(
         response.data = response.data.data
       } else {
         // Backend error response - throw error with backend message
-        const error = new Error(response.data.message || '请求失败')
+        const error = new Error(response.data.message || '请求失败') as any
         error.response = {
           ...response,
           status: response.data.code,

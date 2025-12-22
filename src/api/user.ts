@@ -238,6 +238,8 @@ export const adminApi = {
 export const adminAPI = adminApi
 
 // 导出类型接口
+export type User = DonationUser
+
 export interface UserAPI {
   getUsers: typeof userApi.getUsers
   getUserDetail: typeof userApi.getUserDetail

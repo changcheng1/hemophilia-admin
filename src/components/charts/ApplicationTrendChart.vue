@@ -10,7 +10,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import * as echarts from 'echarts'
-import type { MonthlyStats } from '@/types'
+import type { MonthlyStats } from '@/types/dashboard'
 
 interface Props {
   data: MonthlyStats[]

@@ -57,6 +57,7 @@
                 v-model="searchForm.status"
                 placeholder="请选择"
                 clearable
+                style="min-width: 150px; width: 100%"
               >
                 <el-option
                   v-for="status in finalReviewStatuses"
@@ -621,8 +622,6 @@ const handleReviewSubmitted = async (result: 'approve' | 'reject', comment: stri
     
     // 刷新列表显示最新状态
     fetchFinalReviewApplications()
-    
-    ElMessage.success(`审核${result === 'approve' ? '通过' : '退回'}成功`)
   } catch (error) {
     console.error('Review submission failed:', error)
     ElMessage.error('审核提交失败')

@@ -21,7 +21,7 @@
             <div class="file-preview">
               <img 
                 v-if="file.url" 
-                :src="file.url" 
+                :src="getFileUrl(file)" 
                 :alt="getFileName(file)"
                 class="file-image"
                 @error="handleImageError"
@@ -71,8 +71,8 @@
     >
       <div class="preview-container">
         <img 
-          v-if="currentPreviewFile?.url" 
-          :src="currentPreviewFile.url" 
+          v-if="currentPreviewUrl" 
+          :src="currentPreviewUrl" 
           :alt="currentPreviewFile ? getFileName(currentPreviewFile) : ''"
           class="preview-image" 
         />
@@ -96,6 +96,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Document, Download, Plus } from '@element-plus/icons-vue'
+import { normalizeFileUrl } from '@/utils/fileHandler'
 
 interface FileItem {
   id?: number
@@ -137,6 +138,16 @@ const props = withDefaults(defineProps<Props>(), {
 
 const previewVisible = ref(false)
 const currentPreviewFile = ref<FileItem | null>(null)
+
+// 获取处理后的文件 URL
+const getFileUrl = (file: FileItem): string => {
+  return normalizeFileUrl(file.url)
+}
+
+// 获取当前预览文件的 URL
+const currentPreviewUrl = computed(() => {
+  return currentPreviewFile.value ? normalizeFileUrl(currentPreviewFile.value.url) : ''
+})
 
 // 文件列表
 const fileList = computed(() => props.modelValue || [])
@@ -252,7 +263,7 @@ const handlePreviewClose = () => {
 const downloadFile = (file: FileItem | null) => {
   if (file?.url) {
     const link = document.createElement('a')
-    link.href = file.url
+    link.href = normalizeFileUrl(file.url)
     link.download = getFileName(file)
     link.target = '_blank'
     document.body.appendChild(link)

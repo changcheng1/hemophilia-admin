@@ -1,5 +1,45 @@
 import { useNotificationStore } from '@/stores/notification'
 
+/**
+ * 获取 API 基础 URL
+ */
+export const getApiBaseUrl = (): string => {
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+}
+
+/**
+ * 处理文件 URL，将 localhost 地址替换为正确的 API 地址
+ * @param url 原始文件 URL
+ * @returns 处理后的文件 URL
+ */
+export const normalizeFileUrl = (url: string | undefined | null): string => {
+  if (!url) return ''
+  
+  const baseUrl = getApiBaseUrl()
+  
+  // 如果已经是相对路径，直接拼接 API 基础 URL
+  if (url.startsWith('/uploads') || url.startsWith('uploads')) {
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`
+  }
+  
+  // 如果是 localhost:3000 地址，替换为当前环境的 API 地址
+  if (url.includes('localhost:3000') || url.includes('127.0.0.1:3000')) {
+    // 提取路径部分
+    try {
+      const urlObj = new URL(url)
+      return `${baseUrl}${urlObj.pathname}`
+    } catch {
+      // 如果 URL 解析失败，尝试简单替换
+      return url
+        .replace(/http:\/\/localhost:3000/g, baseUrl)
+        .replace(/http:\/\/127\.0\.0\.1:3000/g, baseUrl)
+    }
+  }
+  
+  // 其他情况直接返回原 URL
+  return url
+}
+
 export interface FileValidationOptions {
   maxSize?: number // in bytes
   allowedTypes?: string[]

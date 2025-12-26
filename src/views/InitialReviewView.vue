@@ -57,6 +57,7 @@
                 v-model="searchForm.status"
                 placeholder="请选择"
                 clearable
+                style="min-width: 150px; width: 100%"
               >
                 <el-option
                   v-for="status in reviewableStatuses"

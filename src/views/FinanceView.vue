@@ -119,6 +119,19 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
+        <el-table-column label="操作" width="120" fixed="right">
+          <template #default="{ row }">
+            <div class="action-buttons">
+              <el-button
+                type="primary"
+                size="small"
+                @click="handleViewApplication(row)"
+              >
+                查看
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
       </el-table>
 
       <!-- Pagination -->
@@ -138,7 +151,7 @@
     <!-- Spot Check Dialog -->
     <el-dialog
       v-model="spotCheckDialogVisible"
-      title="抽查详情"
+      title="申请详情"
       width="1200px"
       top="5vh"
       :close-on-click-modal="false"
@@ -179,14 +192,6 @@
             />
           </el-tab-pane>
         </el-tabs>
-
-        <!-- 审核记录组件 - 不显示审核操作 -->
-        <ApplicationReviews
-          :reviews="applicationReviews"
-          :loading="loadingReviews"
-          :show-actions="false"
-          :application-status="currentApplicationDetail?.status"
-        />
       </div>
 
       <template #footer>
@@ -206,11 +211,10 @@ import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 
 import { useApplicationStore } from '@/stores/application'
-import type { ApplicationReview } from '@/api/admin-application'
+import type { ApplicationListItem } from '@/types/application'
 import BasicInfoDisplay from '@/components/common/BasicInfoDisplay.vue'
 import InvoiceUploadForm from '@/components/common/InvoiceUploadForm.vue'
 import FileUploadSection from '@/components/common/FileUploadSection.vue'
-import ApplicationReviews from '@/components/ApplicationReviews.vue'
 
 const applicationStore = useApplicationStore()
 
@@ -256,9 +260,6 @@ interface ApplicationDetail {
 const currentApplicationDetail = ref<ApplicationDetail | null>(null)
 
 const activeDetailTab = ref('basic')
-
-const applicationReviews = ref<ApplicationReview[]>([])
-const loadingReviews = ref(false)
 
 
 
@@ -321,25 +322,29 @@ const applicationBasicInfo = computed(() => {
 })
 
 const applicationDocuments = computed(() => {
-  if (!currentApplicationDetail.value) {
-    return []
-  }
+  if (!currentApplicationDetail.value?.files) return []
   
-  const app = currentApplicationDetail.value
-  const documentFiles = app.files?.filter((file: Record<string, unknown>) => 
-    file.fileType === 'document' || file.fileType === 'medical' || file.fileType === 'identity'
-  ) || []
-  
-  return documentFiles.map((file: Record<string, unknown>, index: number) => ({
-    id: Number(file.id) || index,
-    fileType: String(file.fileType || 'document'),
-    originalName: String(file.originalName || file.fileName || `申请资料${index + 1}`),
-    name: String(file.originalName || file.fileName || `申请资料${index + 1}`),
-    url: String(file.fileUrl || file.url || ''),
-    uid: String(file.id || `document_${index}`),
-    status: 'success',
-    size: Number(file.fileSize || file.size || 0)
-  }))
+  // 过滤掉发票类型的文件，只返回其他文档
+  return currentApplicationDetail.value.files
+    .filter((file: Record<string, unknown>) => 
+      file.fileType !== 'transport_invoice' && 
+      file.fileType !== 'accommodation_invoice'
+    )
+    .map((file: Record<string, unknown>) => ({
+      id: Number(file.id) || undefined,
+      applicationId: Number(file.applicationId) || undefined,
+      fileType: String(file.fileType || ''),
+      originalName: String(file.originalName || ''),
+      filename: String(file.filename || ''),
+      path: String(file.path || ''),
+      url: String(file.url || ''),
+      mimetype: String(file.mimetype || ''),
+      size: String(file.size || ''),
+      createdAt: String(file.createdAt || ''),
+      // 兼容旧格式
+      name: String(file.originalName || ''),
+      uid: Number(file.id) || Date.now()
+    }))
 })
 
 const applicationInvoices = computed(() => {
@@ -353,28 +358,33 @@ const applicationInvoices = computed(() => {
   }
   
   const app = currentApplicationDetail.value
-  const invoiceFiles = app.files?.filter((file: Record<string, unknown>) => file.fileType === 'invoice') || []
   
-  // 根据文件名或其他标识分类发票文件
-  const transportFiles = invoiceFiles.filter((file: Record<string, unknown>) => {
-    const fileName = String(file.originalName || '')
-    return fileName.includes('交通') || fileName.includes('车票') || fileName.includes('火车')
-  }).map((file: Record<string, unknown>, index: number) => ({
-    name: String(file.originalName || file.fileName || `交通费发票${index + 1}`),
-    url: String(file.fileUrl || file.url || ''),
-    uid: String(file.id || `transport_${index}`),
-    status: 'success'
-  }))
+  // 根据 fileType 筛选交通费发票和住宿费发票
+  const transportFiles = (app.files || [])
+    .filter((file: Record<string, unknown>) => file.fileType === 'transport_invoice')
+    .map((file: Record<string, unknown>) => ({
+      id: file.id,
+      name: String(file.originalName || `交通费发票`),
+      url: String(file.url || ''),
+      uid: String(file.id || Date.now()),
+      status: 'success',
+      size: Number(file.size) || 0,
+      fileType: file.fileType,
+      originalName: file.originalName
+    }))
   
-  const accommodationFiles = invoiceFiles.filter((file: Record<string, unknown>) => {
-    const fileName = String(file.originalName || '')
-    return fileName.includes('住宿') || fileName.includes('酒店') || fileName.includes('宾馆')
-  }).map((file: Record<string, unknown>, index: number) => ({
-    name: String(file.originalName || file.fileName || `住宿费发票${index + 1}`),
-    url: String(file.fileUrl || file.url || ''),
-    uid: String(file.id || `accommodation_${index}`),
-    status: 'success'
-  }))
+  const accommodationFiles = (app.files || [])
+    .filter((file: Record<string, unknown>) => file.fileType === 'accommodation_invoice')
+    .map((file: Record<string, unknown>) => ({
+      id: file.id,
+      name: String(file.originalName || `住宿费发票`),
+      url: String(file.url || ''),
+      uid: String(file.id || Date.now()),
+      status: 'success',
+      size: Number(file.size) || 0,
+      fileType: file.fileType,
+      originalName: file.originalName
+    }))
   
   return {
     transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,
@@ -431,6 +441,35 @@ const getStatusText = (status: string): string => {
 
 const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleString('zh-CN')
+}
+
+// 查看申请详情
+const handleViewApplication = async (application: ApplicationListItem) => {
+  try {
+    // 使用管理员API根据申请ID查询完整的申请信息
+    const detail = await applicationStore.fetchAdminApplicationDetail(application.id)
+    
+    // 转换文件数据格式以匹配前端组件期望的格式
+    if (detail.files && detail.files.length > 0) {
+      detail.files = detail.files.map((file: Record<string, unknown>) => ({
+        ...file,
+        fileUrl: file.url || file.path || '',
+        fileSize: file.size || 0,
+        createdAt: file.createdAt || file.uploadedAt
+      }))
+    }
+    
+    currentApplicationDetail.value = detail as ApplicationDetail
+    
+    // 重置标签页
+    activeDetailTab.value = 'basic'
+    
+    // 显示对话框
+    spotCheckDialogVisible.value = true
+  } catch (error) {
+    console.error('获取申请详情失败:', error)
+    ElMessage.error('获取申请详情失败')
+  }
 }
 
 const handleSearch = () => {
@@ -578,7 +617,7 @@ const exportToExcel = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, '打款信息表')
 
     // 生成Excel文件并下载
-    const fileName = `打款信息表_${new Date().toISOString().slice(0, 10)}.xlsx`
+    const fileName = `打款信息表_${new Date().toISOString().slice(0, 10)}.xls`
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
     const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
     saveAs(blob, fileName)

@@ -33,19 +33,18 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const logout = async (): Promise<void> => {
-    try {
+    // try {
       // Call logout API to invalidate token on server
-      await authAPI.logout()
-    } catch (error) {
+      // await authAPI.logout()
+    // } catch (error) {
       // Continue with local logout even if API call fails
-      console.warn('Logout API call failed:', error)
-    } finally {
+    // } finally {
       // Clear local state
       user.value = null
       token.value = null
       permissions.value = []
       localStorage.removeItem('admin_token')
-    }
+    // }
   }
 
   const getCurrentUser = async (): Promise<void> => {

@@ -423,16 +423,4 @@ onUnmounted(() => {
   box-shadow: none !important;
 }
 
-/* Dark mode support (optional enhancement) */
-@media (prefers-color-scheme: dark) {
-  .header {
-    background-color: #1f2937;
-    border-bottom-color: #374151;
-    color: #f9fafb;
-  }
-  
-  .main-content {
-    background-color: #111827;
-  }
-}
 </style>

@@ -1,109 +1,153 @@
 <template>
   <div class="invoice-upload-form">
-    <el-card class="invoice-card" shadow="hover">
-      <template #header>
-        <div class="card-header">
-          <el-icon class="header-icon"><Document /></el-icon>
-          <span class="header-title">发票信息</span>
-        </div>
-      </template>
-
-      <div class="invoice-content">
-        <!-- 交通费发票 -->
-        <div class="invoice-section">
-          <div class="section-header">
-            <h4 class="section-title">交通费发票</h4>
-          </div>
-
-          <div class="amount-display">
-            <div class="info-item">
-              <label class="info-label">报销金额</label>
-              <div class="info-value amount-text">
-                {{ formatAmount(formData.transportReimbursementAmount) }}
+    <!-- 交通费发票 -->
+    <div class="file-group">
+      <div class="group-header">
+        <h3 class="group-title">交通费发票</h3>
+        <span class="group-count" v-if="transportInvoiceFiles.length > 0">
+          ({{ transportInvoiceFiles.length }})
+        </span>
+      </div>
+      
+      <div class="amount-info">
+        <span class="amount-label">报销金额：</span>
+        <span class="amount-value">{{ formatAmount(formData.transportReimbursementAmount) }}</span>
+      </div>
+      
+      <div class="group-content">
+        <!-- 有文件时展示文件列表 -->
+        <div v-if="transportInvoiceFiles.length > 0" class="file-list">
+          <div 
+            v-for="file in transportInvoiceFiles" 
+            :key="file.uid" 
+            class="file-item" 
+            @click="handlePreview(file)"
+          >
+            <!-- 文件图片预览 -->
+            <div class="file-preview">
+              <img 
+                v-if="file.url" 
+                :src="getFileUrl(file)" 
+                :alt="file.name"
+                class="file-image"
+                @error="handleImageError"
+              />
+              <div v-else class="file-placeholder">
+                <el-icon class="placeholder-icon"><Document /></el-icon>
               </div>
             </div>
-          </div>
-
-          <!-- 交通费发票文件 -->
-          <div class="invoice-files" v-if="transportInvoiceFiles.length > 0">
-            <h5 class="files-title">发票文件</h5>
-            <div class="file-list">
-              <div v-for="file in transportInvoiceFiles" :key="file.uid" class="file-item">
-                <div class="file-info">
-                  <el-icon class="file-icon"><Document /></el-icon>
-                  <span class="file-name">{{ file.name }}</span>
-                  <el-button 
-                    type="primary" 
-                    link 
-                    size="small" 
-                    @click="handlePreview(file)"
-                  >
-                    预览
-                  </el-button>
-                </div>
-              </div>
+            
+            <!-- 文件名称 -->
+            <div class="file-info">
+              <span class="file-name">{{ file.name }}</span>
+              <span class="file-size" v-if="file.size">{{ formatFileSize(file.size) }}</span>
             </div>
-          </div>
-        </div>
-
-        <!-- 住宿费发票 -->
-        <div class="invoice-section">
-          <div class="section-header">
-            <h4 class="section-title">住宿费发票</h4>
-          </div>
-
-          <div class="amount-display">
-            <div class="info-item">
-              <label class="info-label">报销金额</label>
-              <div class="info-value amount-text">
-                {{ formatAmount(formData.accommodationReimbursementAmount) }}
-              </div>
-            </div>
-          </div>
-
-          <!-- 住宿费发票文件 -->
-          <div class="invoice-files" v-if="accommodationInvoiceFiles.length > 0">
-            <h5 class="files-title">发票文件</h5>
-            <div class="file-list">
-              <div v-for="file in accommodationInvoiceFiles" :key="file.uid" class="file-item">
-                <div class="file-info">
-                  <el-icon class="file-icon"><Document /></el-icon>
-                  <span class="file-name">{{ file.name }}</span>
-                  <el-button 
-                    type="primary" 
-                    link 
-                    size="small" 
-                    @click="handlePreview(file)"
-                  >
-                    预览
-                  </el-button>
-                </div>
-              </div>
+            
+            <!-- 查看按钮 -->
+            <div class="file-action">
+              <el-button 
+                type="primary" 
+                link 
+                size="small"
+                @click.stop="handlePreview(file)"
+              >
+                查看
+              </el-button>
             </div>
           </div>
         </div>
-
-        <!-- 总计金额 -->
-        <div class="total-amount" v-if="totalAmount > 0">
-          <el-card class="amount-card" shadow="never">
-            <div class="amount-display">
-              <span class="amount-label">申请报销总金额：</span>
-              <span class="amount-value">¥{{ formatAmount(totalAmount) }}</span>
-            </div>
-          </el-card>
+        
+        <!-- 无文件时的占位符 -->
+        <div v-else class="empty-placeholder">
+          <div class="placeholder-box">
+            <el-icon class="plus-icon"><Plus /></el-icon>
+          </div>
+          <div class="placeholder-text">暂无发票文件</div>
         </div>
       </div>
-    </el-card>
+    </div>
 
+    <!-- 住宿费发票 -->
+    <div class="file-group">
+      <div class="group-header">
+        <h3 class="group-title">住宿费发票</h3>
+        <span class="group-count" v-if="accommodationInvoiceFiles.length > 0">
+          ({{ accommodationInvoiceFiles.length }})
+        </span>
+      </div>
+      
+      <div class="amount-info">
+        <span class="amount-label">报销金额：</span>
+        <span class="amount-value">{{ formatAmount(formData.accommodationReimbursementAmount) }}</span>
+      </div>
+      
+      <div class="group-content">
+        <!-- 有文件时展示文件列表 -->
+        <div v-if="accommodationInvoiceFiles.length > 0" class="file-list">
+          <div 
+            v-for="file in accommodationInvoiceFiles" 
+            :key="file.uid" 
+            class="file-item" 
+            @click="handlePreview(file)"
+          >
+            <!-- 文件图片预览 -->
+            <div class="file-preview">
+              <img 
+                v-if="file.url" 
+                :src="getFileUrl(file)" 
+                :alt="file.name"
+                class="file-image"
+                @error="handleImageError"
+              />
+              <div v-else class="file-placeholder">
+                <el-icon class="placeholder-icon"><Document /></el-icon>
+              </div>
+            </div>
+            
+            <!-- 文件名称 -->
+            <div class="file-info">
+              <span class="file-name">{{ file.name }}</span>
+              <span class="file-size" v-if="file.size">{{ formatFileSize(file.size) }}</span>
+            </div>
+            
+            <!-- 查看按钮 -->
+            <div class="file-action">
+              <el-button 
+                type="primary" 
+                link 
+                size="small"
+                @click.stop="handlePreview(file)"
+              >
+                查看
+              </el-button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 无文件时的占位符 -->
+        <div v-else class="empty-placeholder">
+          <div class="placeholder-box">
+            <el-icon class="plus-icon"><Plus /></el-icon>
+          </div>
+          <div class="placeholder-text">暂无发票文件</div>
+        </div>
+      </div>
+    </div>
     <!-- 图片预览对话框 -->
     <el-dialog
       v-model="previewVisible"
       title="发票预览"
-      width="60%"
+      width="70%"
       :before-close="handlePreviewClose"
+      class="preview-dialog"
     >
       <div class="preview-container">
-        <img :src="previewImageUrl" alt="预览图片" class="preview-image" />
+        <img 
+          v-if="currentPreviewUrl" 
+          :src="currentPreviewUrl" 
+          :alt="currentPreviewFile?.name || ''"
+          class="preview-image" 
+        />
       </div>
     </el-dialog>
   </div>
@@ -111,7 +155,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Document } from '@element-plus/icons-vue'
+import { Document, Plus } from '@element-plus/icons-vue'
+import { normalizeFileUrl } from '@/utils/fileHandler'
 
 interface FileItem {
   name: string
@@ -136,7 +181,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const previewVisible = ref(false)
-const previewImageUrl = ref('')
+const currentPreviewFile = ref<FileItem | null>(null)
 
 // 表单数据
 const formData = computed(() => props.modelValue)
@@ -147,33 +192,35 @@ const transportInvoiceFiles = computed(() => props.modelValue.transportInvoiceFi
 // 住宿费发票文件
 const accommodationInvoiceFiles = computed(() => props.modelValue.accommodationInvoiceFiles || [])
 
-// 总金额计算
-const totalAmount = computed(() => {
-  const transport = parseFloat(String(props.modelValue.transportReimbursementAmount || 0)) || 0
-  const accommodation = parseFloat(String(props.modelValue.accommodationReimbursementAmount || 0)) || 0
-  return transport + accommodation
+// 获取处理后的文件 URL
+const getFileUrl = (file: FileItem): string => {
+  return normalizeFileUrl(file.url)
+}
+
+// 获取当前预览文件的 URL
+const currentPreviewUrl = computed(() => {
+  return currentPreviewFile.value ? normalizeFileUrl(currentPreviewFile.value.url) : ''
 })
 
 // 预览文件
 const handlePreview = (file: FileItem) => {
   if (file.url) {
-    const fileType = file.name.split('.').pop()?.toLowerCase()
-    const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
-    
-    if (imageTypes.includes(fileType || '')) {
-      previewImageUrl.value = file.url
-      previewVisible.value = true
-    } else {
-      // 对于非图片文件，在新窗口打开
-      window.open(file.url, '_blank')
-    }
+    currentPreviewFile.value = file
+    previewVisible.value = true
   }
 }
 
 // 关闭预览
 const handlePreviewClose = () => {
   previewVisible.value = false
-  previewImageUrl.value = ''
+  currentPreviewFile.value = null
+}
+
+// 图片加载错误处理
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  console.warn('图片加载失败:', img.src)
+  img.style.display = 'none'
 }
 
 // 格式化金额显示
@@ -181,172 +228,217 @@ const formatAmount = (amount: string | number | undefined): string => {
   const num = parseFloat(String(amount || 0)) || 0
   return num > 0 ? num.toFixed(2) + '元' : '0.00元'
 }
+
+// 格式化文件大小
+const formatFileSize = (size: number | undefined): string => {
+  if (!size) return ''
+  if (size < 1024) {
+    return `${size}B`
+  } else if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)}KB`
+  } else {
+    return `${(size / (1024 * 1024)).toFixed(1)}MB`
+  }
+}
 </script>
 
 <style scoped lang="scss">
 .invoice-upload-form {
-  .invoice-card {
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e4e7ed;
+  .file-group {
+    margin-bottom: 32px;
     
-    :deep(.el-card__header) {
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border-bottom: 1px solid #e4e7ed;
-      padding: 16px 20px;
-    }
-    
-    :deep(.el-card__body) {
-      padding: 24px;
-    }
-  }
-
-  .card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    .header-icon {
-      color: #409eff;
-      font-size: 18px;
+    &:last-child {
+      margin-bottom: 0;
     }
 
-    .header-title {
-      font-weight: 600;
-      color: #303133;
-      font-size: 16px;
-    }
-  }
+    .group-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
 
-  .invoice-content {
-    .invoice-section {
-      margin-bottom: 40px;
-      padding: 20px;
-      background: #fafbfc;
+      .group-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1890ff;
+        margin: 0;
+        flex: 1;
+      }
+
+      .group-count {
+        color: #666;
+        font-size: 14px;
+        font-weight: 500;
+      }
+    }
+
+    .amount-info {
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: #f8f9fa;
       border-radius: 8px;
-      border: 1px solid #e4e7ed;
+      border-left: 4px solid #1890ff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
 
-      &:last-child {
-        margin-bottom: 0;
+      .amount-label {
+        color: #666;
+        font-size: 14px;
+        line-height: 1.6;
       }
 
-      .section-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 20px;
-
-        .section-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: #303133;
-          margin: 0;
-        }
+      .amount-value {
+        color: #409eff;
+        font-size: 16px;
+        font-weight: 600;
       }
+    }
 
-      .amount-display {
-        margin-bottom: 20px;
+    .group-content {
+      .file-list {
+        border: 1px solid #f0f0f0;
+        border-radius: 8px;
+        overflow: hidden;
 
-        .info-item {
-          .info-label {
-            display: block;
-            font-weight: 500;
-            color: #606266;
-            margin-bottom: 8px;
-            font-size: 14px;
+        .file-item {
+          display: flex;
+          align-items: center;
+          padding: 12px 16px;
+          border-bottom: 1px solid #f5f5f5;
+          background: #fff;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+
+          &:last-child {
+            border-bottom: none;
           }
 
-          .info-value {
-            color: #303133;
-            font-size: 14px;
-            line-height: 1.5;
-
-            &.amount-text {
-              font-size: 16px;
-              font-weight: 600;
-              color: #409eff;
-            }
+          &:hover {
+            background: #f8f9fa;
           }
-        }
-      }
 
-      .invoice-files {
-        .files-title {
-          font-size: 14px;
-          font-weight: 600;
-          color: #606266;
-          margin: 0 0 12px 0;
-        }
+          .file-preview {
+            width: 40px;
+            height: 40px;
+            margin-right: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
 
-        .file-list {
-          .file-item {
-            padding: 12px;
-            border: 1px solid #e4e7ed;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            background: #ffffff;
-            transition: all 0.3s ease;
-
-            &:hover {
-              background: #f0f8ff;
-              border-color: #409eff;
+            .file-image {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
             }
 
-            &:last-child {
-              margin-bottom: 0;
-            }
-
-            .file-info {
+            .file-placeholder {
               display: flex;
               align-items: center;
-              gap: 12px;
+              justify-content: center;
+              height: 100%;
+              color: #c0c4cc;
 
-              .file-icon {
-                color: #409eff;
-                font-size: 18px;
+              .placeholder-icon {
+                font-size: 20px;
               }
+            }
+          }
 
-              .file-name {
-                flex: 1;
-                color: #303133;
-                font-weight: 500;
+          .file-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+
+            .file-name {
+              font-size: 14px;
+              color: #333;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+
+            .file-size {
+              font-size: 12px;
+              color: #999;
+            }
+          }
+
+          .file-action {
+            flex-shrink: 0;
+
+            .el-button {
+              color: #1890ff;
+              
+              &:hover {
+                color: #40a9ff;
               }
             }
           }
         }
       }
-    }
 
-    .total-amount {
-      margin: 32px 0;
+      .empty-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px 20px;
+        border: 2px dashed #d9d9d9;
+        border-radius: 12px;
+        background: #fafafa;
 
-      .amount-card {
-        background: linear-gradient(135deg, #e8f4fd 0%, #f0f9ff 100%);
-        border: 1px solid #b3d8ff;
-
-        :deep(.el-card__body) {
-          padding: 20px;
-        }
-
-        .amount-display {
+        .placeholder-box {
+          width: 80px;
+          height: 80px;
+          border: 2px dashed #c0c4cc;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 12px;
+          margin-bottom: 12px;
+          background: #fff;
 
-          .amount-label {
-            font-size: 16px;
-            font-weight: 500;
-            color: #606266;
-          }
-
-          .amount-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #409eff;
-            text-shadow: 0 1px 2px rgba(64, 158, 255, 0.2);
+          .plus-icon {
+            font-size: 32px;
+            color: #c0c4cc;
           }
         }
+
+        .placeholder-text {
+          color: #909399;
+          font-size: 14px;
+        }
+      }
+    }
+  }
+
+  .total-amount {
+    margin-top: 24px;
+
+    .total-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 20px;
+      background: linear-gradient(135deg, #e8f4fd 0%, #f0f9ff 100%);
+      border: 1px solid #b3d8ff;
+      border-radius: 12px;
+
+      .total-label {
+        font-size: 16px;
+        font-weight: 500;
+        color: #606266;
+      }
+
+      .total-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #409eff;
       }
     }
   }
@@ -356,9 +448,108 @@ const formatAmount = (amount: string | number | undefined): string => {
 
     .preview-image {
       max-width: 100%;
-      max-height: 60vh;
+      max-height: 70vh;
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+// 预览对话框样式
+:deep(.preview-dialog) {
+  .el-dialog__body {
+    padding: 20px;
+  }
+}
+
+// 响应式设计
+@media (max-width: 768px) {
+  .invoice-upload-form {
+    .file-group {
+      .group-header {
+        .group-title {
+          font-size: 16px;
+        }
+      }
+
+      .amount-info {
+        padding: 10px 12px;
+        
+        .amount-label {
+          font-size: 13px;
+        }
+
+        .amount-value {
+          font-size: 14px;
+        }
+      }
+
+      .group-content {
+        .file-list {
+          .file-item {
+            padding: 10px 12px;
+
+            .file-preview {
+              width: 36px;
+              height: 36px;
+              margin-right: 10px;
+
+              .placeholder-icon {
+                font-size: 18px;
+              }
+            }
+
+            .file-info {
+              .file-name {
+                font-size: 13px;
+              }
+
+              .file-size {
+                font-size: 11px;
+              }
+            }
+
+            .file-action {
+              .el-button {
+                font-size: 12px;
+              }
+            }
+          }
+        }
+
+        .empty-placeholder {
+          padding: 30px 15px;
+
+          .placeholder-box {
+            width: 60px;
+            height: 60px;
+
+            .plus-icon {
+              font-size: 24px;
+            }
+          }
+
+          .placeholder-text {
+            font-size: 13px;
+          }
+        }
+      }
+    }
+
+    .total-amount {
+      .total-card {
+        padding: 16px;
+        flex-direction: column;
+        gap: 8px;
+
+        .total-label {
+          font-size: 14px;
+        }
+
+        .total-value {
+          font-size: 20px;
+        }
+      }
     }
   }
 }

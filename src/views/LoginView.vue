@@ -1,5 +1,8 @@
 <template>
   <div class="login-container login-page">
+    <!-- 科技感动态背景 -->
+    <canvas ref="canvasRef" class="tech-background"></canvas>
+    
     <div class="login-form">
       <div class="login-header">
         <h2>王定国公益基金会管理系统</h2>
@@ -102,6 +105,186 @@ const captchaLoading = ref(false)
 const captchaImage = ref('')
 const captchaKey = ref('')
 
+// Canvas 相关
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+let animationId: number | null = null
+
+// 初始化审批后台风格背景动画
+const initTechBackground = () => {
+  const canvas = canvasRef.value
+  if (!canvas) return
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  // 设置canvas尺寸
+  const resizeCanvas = () => {
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+  }
+  resizeCanvas()
+  window.addEventListener('resize', resizeCanvas)
+
+  let time = 0
+
+  // 动画循环
+  const animate = () => {
+    time += 0.008
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    // 绘制深蓝色渐变背景
+    const bgGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height)
+    bgGradient.addColorStop(0, '#0f172a')
+    bgGradient.addColorStop(0.5, '#1e3a5f')
+    bgGradient.addColorStop(1, '#0f172a')
+    ctx.fillStyle = bgGradient
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // 绘制流动波浪
+    drawWaves(ctx, canvas.width, canvas.height, time)
+
+    // 绘制浮动光点
+    drawFloatingDots(ctx, canvas.width, canvas.height, time)
+
+    // 绘制几何装饰
+    drawGeometricShapes(ctx, canvas.width, canvas.height, time)
+
+    animationId = requestAnimationFrame(animate)
+  }
+
+  // 绘制多层流动波浪
+  const drawWaves = (ctx: CanvasRenderingContext2D, width: number, height: number, t: number) => {
+    const waveConfigs = [
+      { amplitude: 50, frequency: 0.008, speed: 1, yOffset: height * 0.7, color: 'rgba(59, 130, 246, 0.08)' },
+      { amplitude: 40, frequency: 0.01, speed: 1.2, yOffset: height * 0.75, color: 'rgba(37, 99, 235, 0.06)' },
+      { amplitude: 60, frequency: 0.006, speed: 0.8, yOffset: height * 0.8, color: 'rgba(30, 64, 175, 0.05)' },
+    ]
+
+    waveConfigs.forEach(config => {
+      ctx.beginPath()
+      ctx.moveTo(0, height)
+      
+      for (let x = 0; x <= width; x += 5) {
+        const y = config.yOffset + 
+          Math.sin(x * config.frequency + t * config.speed) * config.amplitude +
+          Math.sin(x * config.frequency * 0.5 + t * config.speed * 0.7) * config.amplitude * 0.5
+        ctx.lineTo(x, y)
+      }
+      
+      ctx.lineTo(width, height)
+      ctx.closePath()
+      ctx.fillStyle = config.color
+      ctx.fill()
+    })
+  }
+
+  // 绘制浮动光点
+  const drawFloatingDots = (ctx: CanvasRenderingContext2D, width: number, height: number, t: number) => {
+    const dotCount = 30
+    
+    for (let i = 0; i < dotCount; i++) {
+      const baseX = (i * 137.5) % width
+      const baseY = (i * 89.3) % height
+      const x = baseX + Math.sin(t + i * 0.5) * 30
+      const y = baseY + Math.cos(t * 0.7 + i * 0.3) * 20
+      const radius = 2 + Math.sin(t + i) * 1
+      const opacity = 0.3 + Math.sin(t * 0.5 + i * 0.2) * 0.2
+
+      // 光点
+      ctx.beginPath()
+      ctx.arc(x, y, radius, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(147, 197, 253, ${opacity})`
+      ctx.fill()
+
+      // 光晕
+      const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius * 4)
+      gradient.addColorStop(0, `rgba(59, 130, 246, ${opacity * 0.3})`)
+      gradient.addColorStop(1, 'rgba(59, 130, 246, 0)')
+      ctx.beginPath()
+      ctx.arc(x, y, radius * 4, 0, Math.PI * 2)
+      ctx.fillStyle = gradient
+      ctx.fill()
+    }
+  }
+
+  // 绘制几何装饰图形
+  const drawGeometricShapes = (ctx: CanvasRenderingContext2D, width: number, height: number, t: number) => {
+    // 左上角装饰圆环
+    const cx1 = width * 0.1
+    const cy1 = height * 0.2
+    const r1 = 80 + Math.sin(t) * 10
+    
+    ctx.beginPath()
+    ctx.arc(cx1, cy1, r1, 0, Math.PI * 2)
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)'
+    ctx.lineWidth = 2
+    ctx.stroke()
+
+    ctx.beginPath()
+    ctx.arc(cx1, cy1, r1 * 0.7, 0, Math.PI * 2)
+    ctx.strokeStyle = 'rgba(96, 165, 250, 0.08)'
+    ctx.stroke()
+
+    // 右下角装饰
+    const cx2 = width * 0.9
+    const cy2 = height * 0.85
+    const r2 = 100 + Math.cos(t * 0.8) * 15
+
+    ctx.beginPath()
+    ctx.arc(cx2, cy2, r2, 0, Math.PI * 2)
+    ctx.strokeStyle = 'rgba(37, 99, 235, 0.08)'
+    ctx.lineWidth = 3
+    ctx.stroke()
+
+    // 绘制旋转的虚线圆
+    ctx.save()
+    ctx.translate(cx2, cy2)
+    ctx.rotate(t * 0.3)
+    ctx.setLineDash([10, 20])
+    ctx.beginPath()
+    ctx.arc(0, 0, r2 * 1.3, 0, Math.PI * 2)
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.05)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+    ctx.setLineDash([])
+    ctx.restore()
+
+    // 顶部横向渐变线条
+    const lineY = height * 0.15
+    const lineGradient = ctx.createLinearGradient(0, lineY, width, lineY)
+    lineGradient.addColorStop(0, 'rgba(59, 130, 246, 0)')
+    lineGradient.addColorStop(0.3, 'rgba(59, 130, 246, 0.1)')
+    lineGradient.addColorStop(0.7, 'rgba(59, 130, 246, 0.1)')
+    lineGradient.addColorStop(1, 'rgba(59, 130, 246, 0)')
+    
+    ctx.beginPath()
+    ctx.moveTo(0, lineY)
+    ctx.lineTo(width, lineY)
+    ctx.strokeStyle = lineGradient
+    ctx.lineWidth = 1
+    ctx.stroke()
+
+    // 底部装饰线
+    const bottomLineY = height * 0.92
+    ctx.beginPath()
+    ctx.moveTo(width * 0.2, bottomLineY)
+    ctx.lineTo(width * 0.8, bottomLineY)
+    ctx.strokeStyle = 'rgba(59, 130, 246, 0.06)'
+    ctx.lineWidth = 1
+    ctx.stroke()
+  }
+
+  animate()
+
+  // 返回清理函数
+  return () => {
+    if (animationId) cancelAnimationFrame(animationId)
+    window.removeEventListener('resize', resizeCanvas)
+  }
+}
+
+let cleanupAnimation: (() => void) | undefined
+
 const loginForm = reactive<LoginRequest>({
   phone: '',
   password: '',
@@ -191,6 +374,9 @@ const preventScroll = (e: Event) => {
 onMounted(() => {
   getCaptcha()
   
+  // 初始化科技感背景动画
+  cleanupAnimation = initTechBackground()
+  
   // 添加登录页面类到body
   document.body.classList.add('login-page')
   
@@ -202,6 +388,9 @@ onMounted(() => {
 onUnmounted(() => {
   document.body.classList.remove('login-page')
   document.removeEventListener('focusin', preventScroll)
+  
+  // 清理动画
+  if (cleanupAnimation) cleanupAnimation()
 })
 </script>
 
@@ -212,13 +401,20 @@ onUnmounted(() => {
   align-items: center;
   width: 100vw;
   min-height: 100vh;
-  background-image: url("../assets/login_bg.png");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   padding: 20px;
   box-sizing: border-box;
   overflow: hidden;
+  position: relative;
+}
+
+/* 科技感动态背景 */
+.tech-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
 
 .login-form {
@@ -226,11 +422,17 @@ onUnmounted(() => {
   max-width: 400px;
   min-height: 400px;
   padding: 40px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(64, 158, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   box-sizing: border-box;
   position: relative;
+  z-index: 1;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .login-header {
@@ -239,8 +441,14 @@ onUnmounted(() => {
 }
 
 .login-header h2 {
-  color: #333;
+  color: #1a365d;
   margin-bottom: 10px;
+  font-size: 22px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .login-header p {

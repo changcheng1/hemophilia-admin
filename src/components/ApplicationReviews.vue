@@ -79,12 +79,15 @@
             {{ reviewAction === 'approve' ? '通过' : '退回' }}
           </el-tag>
         </el-form-item>
-        <el-form-item label="审核意见" required>
+        <el-form-item 
+          label="审核意见" 
+          :required="reviewAction === 'reject'"
+        >
           <el-input
             v-model="reviewForm.comment"
             type="textarea"
             :rows="4"
-            placeholder="请输入审核意见"
+            :placeholder="reviewAction === 'reject' ? '请输入退回理由（必填）' : '请输入审核意见（可选）'"
             maxlength="500"
             show-word-limit
           />
@@ -169,7 +172,8 @@ const getResultText = (result: string): string => {
     'initial_approved': '初审通过',
     'under_review': '初审存疑',
     'rejected': '审核退回',
-    'final_approved': '审核通过'
+    'final_approved': '审核通过',
+    'disbursed': '援助发放'
   }
   return resultMap[result] || result
 }
@@ -178,6 +182,7 @@ const getResultType = (result: string): string => {
   switch (result) {
     case 'final_approved':
     case 'initial_approved':
+    case 'disbursed':
       return 'success'
     case 'rejected':
       return 'danger'
@@ -201,8 +206,9 @@ const handleReview = (action: 'approve' | 'reject') => {
 }
 
 const submitReview = async () => {
-  if (!reviewForm.comment.trim()) {
-    ElMessage.warning('请输入审核意见')
+  // 审核退回时必须填写理由，审核通过时理由可选
+  if (reviewAction.value === 'reject' && !reviewForm.comment.trim()) {
+    ElMessage.warning('审核退回时必须填写理由')
     return
   }
 
@@ -210,7 +216,6 @@ const submitReview = async () => {
   try {
     emit('reviewSubmitted', reviewAction.value, reviewForm.comment)
     reviewDialogVisible.value = false
-    ElMessage.success(`审核${reviewAction.value === 'approve' ? '通过' : '退回'}提交成功`)
   } catch (error) {
     console.error('Review submission failed:', error)
     ElMessage.error('审核提交失败')

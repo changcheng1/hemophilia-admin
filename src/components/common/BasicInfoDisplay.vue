@@ -97,25 +97,21 @@
       <h3 class="section-title">申请信息</h3>
       <div class="info-list">
         <div class="info-item">
-          <span class="info-label">援助项目</span>
+          <span class="info-label">申请项目</span>
           <span class="info-value">{{ formData.donationProject || '-' }}</span>
           
         </div>
         <div class="info-item">
-          <span class="info-label">援助期数</span>
+          <span class="info-label">申请期数</span>
           <span class="info-value">{{ formData.donationPeriod || '-' }}</span>
         </div>
         <div class="info-item">
           <span class="info-label">病例描述</span>
           <span class="info-value">{{ formData.caseDescription || '-' }}</span>
         </div>
-        <div class="info-item" v-if="formData.transportReimbursementAmount">
-          <span class="info-label">交通费报销金额</span>
-          <span class="info-value">¥{{ formData.transportReimbursementAmount || '-' }}</span>
-        </div>
-        <div class="info-item" v-if="formData.accommodationReimbursementAmount">
-          <span class="info-label">住宿费报销金额</span>
-          <span class="info-value">¥{{ formData.accommodationReimbursementAmount || '-' }}</span>
+        <div class="info-item" v-if="formData.totalReimbursementAmount">
+          <span class="info-label">申请总金额</span>
+          <span class="info-value">¥{{ formData.totalReimbursementAmount || '-' }}</span>
         </div>
       </div>
     </div>
@@ -157,8 +153,7 @@ interface FormData {
   status?: string
   
   // 发票信息
-  transportReimbursementAmount?: string | number
-  accommodationReimbursementAmount?: string | number
+  totalReimbursementAmount?: string | number
 }
 
 interface Props {
@@ -205,7 +200,6 @@ const formatDate = (dateStr?: string): string => {
       color: #1890ff;
       margin: 0 0 16px 0;
       padding-bottom: 8px;
-      border-bottom: 1px solid #f0f0f0;
     }
 
     .info-list {

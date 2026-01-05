@@ -51,7 +51,7 @@
         </el-col>
         <el-col :span="4">
           <div class="action-buttons">
-            <el-button type="success" @click="handleCreateAdmin">
+            <el-button v-if="isAdmin" type="success" @click="handleCreateAdmin">
               <el-icon><Plus /></el-icon>
               新增管理员
             </el-button>
@@ -104,27 +104,30 @@
         </el-table-column>
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
-            <el-button
-              type="primary"
-              size="small"
-              @click="handleEditAdmin(row)"
-            >
-              编辑
-            </el-button>
-            <el-button
-              type="warning"
-              size="small"
-              @click="handleResetPassword(row)"
-            >
-              修改密码
-            </el-button>
-            <el-button
-              :type="row.isActive ? 'danger' : 'success'"
-              size="small"
-              @click="handleToggleStatus(row)"
-            >
-              {{ row.isActive ? '禁用' : '启用' }}
-            </el-button>
+            <template v-if="isAdmin">
+              <el-button
+                type="primary"
+                size="small"
+                @click="handleEditAdmin(row)"
+              >
+                编辑
+              </el-button>
+              <el-button
+                type="warning"
+                size="small"
+                @click="handleResetPassword(row)"
+              >
+                修改密码
+              </el-button>
+              <el-button
+                :type="row.isActive ? 'danger' : 'success'"
+                size="small"
+                @click="handleToggleStatus(row)"
+              >
+                {{ row.isActive ? '禁用' : '启用' }}
+              </el-button>
+            </template>
+            <span v-else style="color: #909399;">无操作权限</span>
           </template>
         </el-table-column>
       </el-table>
@@ -286,15 +289,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { Search, Plus } from '@element-plus/icons-vue'
 import { useUserStore } from '../stores/user'
+import { useAuthStore } from '../stores/auth'
 import { UserRole } from '../types'
 import type { AdminUserDetail, CreateAdminRequest, UpdateAdminRequest } from '../types'
 
 // Store
 const userStore = useUserStore()
+const authStore = useAuthStore()
+
+// Check if current user is admin (only admin has operation permissions)
+const isAdmin = computed(() => authStore.user?.role === UserRole.ADMIN)
 
 // Search and filter state
 const searchQuery = ref('')

@@ -14,7 +14,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item label="援助项目">
+            <el-form-item label="申请项目">
               <el-input
                 v-model="searchForm.donationProject"
                 placeholder="请输入"
@@ -112,8 +112,8 @@
         class="review-table"
       >
         <el-table-column prop="applicationNumber" label="申请号" show-overflow-tooltip/>
-        <el-table-column prop="donationProject" label="援助项目" />
-        <el-table-column prop="donationPeriod" label="援助期数" />
+        <el-table-column prop="donationProject" label="申请项目" />
+        <el-table-column prop="donationPeriod" label="申请期数" />
         <el-table-column prop="phone" label="手机号">
           <template #default="{ row }">
             {{ row.user?.phone || '-' }}
@@ -137,6 +137,15 @@
         <el-table-column label="操作" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
+              <!-- 查看按钮 - 所有状态都可以查看 -->
+              <el-button
+                type="info"
+                size="small"
+                @click="openReviewDialog(row)"
+              >
+                查看
+              </el-button>
+              
               <!-- 需要复核的状态 - 显示复核按钮 -->
               <el-button
                 v-if="['initial_approved', 'under_review'].includes(row.status)"
@@ -145,28 +154,6 @@
                 @click="openReviewDialog(row)"
               >
                 复核
-              </el-button>
-              
-              <!-- 审核通过状态 -->
-              <el-button
-                v-if="row.status === 'final_approved'"
-                type="success"
-                size="small"
-                plain
-                disabled
-              >
-                已通过
-              </el-button>
-              
-              <!-- 审核退回状态 -->
-              <el-button
-                v-if="row.status === 'rejected'"
-                type="danger"
-                size="small"
-                plain
-                disabled
-              >
-                已退回
               </el-button>
             </div>
           </template>
@@ -191,7 +178,7 @@
     <el-dialog
       v-model="reviewDialogVisible"
       title="申请复核"
-      width="1200px"
+      width="1400px"
       top="5vh"
       :close-on-click-modal="false"
     >
@@ -204,43 +191,50 @@
           </el-tag>
         </div>
 
-        <!-- 详细信息标签页 -->
-        <el-tabs v-model="activeDetailTab" class="detail-tabs">
-          <!-- 基本信息 -->
-          <el-tab-pane label="基本信息" name="basic">
+        <!-- 左右分栏布局 -->
+        <div class="content-layout">
+          <!-- 左侧：申请信息 -->
+          <div class="left-section">
+            <h4 class="section-title">申请信息</h4>
             <BasicInfoDisplay
               v-model="applicationBasicInfo"
               :readonly="true"
             />
-          </el-tab-pane>
-            <!-- 资料上传 -->
-          <el-tab-pane label="资料上传" name="documents">
-            <FileUploadSection
-              v-model="applicationDocuments"
-              title="申请资料"
-              :readonly="true"
-            />
-          </el-tab-pane>
+          </div>
 
-          <!-- 发票上传 -->
-          <el-tab-pane label="发票上传" name="invoices">
-            <InvoiceUploadForm
-              v-model="applicationInvoices"
-              :readonly="true"
-            />
-          </el-tab-pane>
-          
+          <!-- 右侧：资料上传和发票上传 -->
+          <div class="right-section">
+            <el-tabs v-model="activeUploadTab" class="upload-tabs">
+              <el-tab-pane label="资料上传" name="documents">
+                <FileUploadSection
+                  v-model="applicationDocuments"
+                  title="申请资料"
+                  :readonly="true"
+                />
+              </el-tab-pane>
+              
+              <el-tab-pane label="发票上传" name="invoices">
+                <InvoiceUploadForm
+                  v-model="applicationInvoices"
+                  :readonly="true"
+                />
+              </el-tab-pane>
+            </el-tabs>
+          </div>
+        </div>
 
-        </el-tabs>
-
-        <!-- 审核记录组件 -->
-        <ApplicationReviews
-          :reviews="applicationReviews"
-          :loading="loadingReviews"
-          :show-actions="currentApplicationDetail && ['initial_approved', 'under_review'].includes(currentApplicationDetail.status)"
-          :application-status="currentApplicationDetail?.status"
-          @review-submitted="handleReviewSubmitted"
-        />
+        <!-- 审核记录区域 -->
+        <div class="review-records-section">
+          <div class="section-divider"></div>
+          <h4 class="section-title">审核记录</h4>
+          <ApplicationReviews
+            :reviews="applicationReviews"
+            :loading="loadingReviews"
+            :show-actions="currentApplicationDetail && ['initial_approved', 'under_review'].includes(currentApplicationDetail.status)"
+            :application-status="currentApplicationDetail?.status"
+            @review-submitted="handleReviewSubmitted"
+          />
+        </div>
       </div>
 
       <template #footer>
@@ -299,6 +293,7 @@ interface ApplicationDetail {
     comment?: string
     createdAt: string
     reviewer?: {
+      id: number
       phone: string
     }
   }>
@@ -307,7 +302,7 @@ interface ApplicationDetail {
 
 const currentApplicationDetail = ref<ApplicationDetail | null>(null)
 const submitting = ref(false)
-const activeDetailTab = ref('basic')
+const activeUploadTab = ref('documents')
 
 const applicationReviews = ref<ApplicationReview[]>([])
 const loadingReviews = ref(false)
@@ -373,13 +368,26 @@ const applicationBasicInfo = computed(() => {
 const applicationDocuments = computed(() => {
   if (!currentApplicationDetail.value?.files) return []
   
+  // 过滤掉发票类型的文件，只返回其他文档
   return currentApplicationDetail.value.files
-    .filter((file: Record<string, unknown>) => file.fileType !== 'invoice') // 过滤掉发票文件
-    .map((file: Record<string, unknown>, index: number) => ({
-      name: String(file.originalName || file.fileName || `文件${index + 1}`),
-      url: String(file.fileUrl || file.url || ''),
-      uid: Number(file.id) || index,
-      status: 'success'
+    .filter((file: Record<string, unknown>) => 
+      file.fileType !== 'transport_invoice' && 
+      file.fileType !== 'accommodation_invoice'
+    )
+    .map((file: Record<string, unknown>) => ({
+      id: Number(file.id) || undefined,
+      applicationId: Number(file.applicationId) || undefined,
+      fileType: String(file.fileType || ''),
+      originalName: String(file.originalName || ''),
+      filename: String(file.filename || ''),
+      path: String(file.path || ''),
+      url: String(file.url || ''),
+      mimetype: String(file.mimetype || ''),
+      size: String(file.size || ''),
+      createdAt: String(file.createdAt || ''),
+      // 兼容旧格式
+      name: String(file.originalName || ''),
+      uid: Number(file.id) || Date.now()
     }))
 })
 
@@ -387,40 +395,43 @@ const applicationDocuments = computed(() => {
 const applicationInvoices = computed(() => {
   if (!currentApplicationDetail.value) {
     return {
-      transportReimbursementAmount: 0,
-      accommodationReimbursementAmount: 0,
+      totalReimbursementAmount: 0,
       transportInvoiceFiles: [],
       accommodationInvoiceFiles: []
     }
   }
   
   const app = currentApplicationDetail.value
-  const invoiceFiles = app.files?.filter((file: Record<string, unknown>) => file.fileType === 'invoice') || []
   
-  // 根据文件名或其他标识分类发票文件
-  const transportFiles = invoiceFiles.filter((file: Record<string, unknown>) => {
-    const fileName = String(file.originalName || '')
-    return fileName.includes('交通') || fileName.includes('车票') || fileName.includes('火车')
-  }).map((file: Record<string, unknown>, index: number) => ({
-    name: String(file.originalName || file.fileName || `交通费发票${index + 1}`),
-    url: String(file.fileUrl || file.url || ''),
-    uid: String(file.id || `transport_${index}`),
-    status: 'success'
-  }))
+  // 根据 fileType 筛选交通费发票和住宿费发票
+  const transportFiles = (app.files || [])
+    .filter((file: Record<string, unknown>) => file.fileType === 'transport_invoice')
+    .map((file: Record<string, unknown>) => ({
+      id: file.id,
+      name: String(file.originalName || `交通费发票`),
+      url: String(file.url || ''),
+      uid: String(file.id || Date.now()),
+      status: 'success',
+      size: Number(file.size) || 0,
+      fileType: file.fileType,
+      originalName: file.originalName
+    }))
   
-  const accommodationFiles = invoiceFiles.filter((file: Record<string, unknown>) => {
-    const fileName = String(file.originalName || '')
-    return fileName.includes('住宿') || fileName.includes('酒店') || fileName.includes('宾馆')
-  }).map((file: Record<string, unknown>, index: number) => ({
-    name: String(file.originalName || file.fileName || `住宿费发票${index + 1}`),
-    url: String(file.fileUrl || file.url || ''),
-    uid: String(file.id || `accommodation_${index}`),
-    status: 'success'
-  }))
+  const accommodationFiles = (app.files || [])
+    .filter((file: Record<string, unknown>) => file.fileType === 'accommodation_invoice')
+    .map((file: Record<string, unknown>) => ({
+      id: file.id,
+      name: String(file.originalName || `住宿费发票`),
+      url: String(file.url || ''),
+      uid: String(file.id || Date.now()),
+      status: 'success',
+      size: Number(file.size) || 0,
+      fileType: file.fileType,
+      originalName: file.originalName
+    }))
   
   return {
-    transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,
-    accommodationReimbursementAmount: Number(app.accommodationReimbursementAmount) || 0,
+    totalReimbursementAmount: Number(app.totalReimbursementAmount) || 0,
     transportInvoiceFiles: transportFiles,
     accommodationInvoiceFiles: accommodationFiles
   }
@@ -504,12 +515,12 @@ const handleReset = () => {
 
 
 const handleSizeChange = (size: number) => {
-  pageSize.value = size
+  applicationStore.setPageSize(size)
   fetchFinalReviewApplications()
 }
 
 const handleCurrentChange = (page: number) => {
-  currentPage.value = page
+  applicationStore.setPage(page)
   fetchFinalReviewApplications()
 }
 
@@ -579,7 +590,7 @@ const openReviewDialog = async (application: ApplicationListItem) => {
     await fetchApplicationReviews(application.id)
     
     reviewDialogVisible.value = true
-    activeDetailTab.value = 'basic'
+    activeUploadTab.value = 'documents'
 
   } catch (error) {
     console.error('❌ 获取申请详情失败:', error)
@@ -754,6 +765,57 @@ onMounted(() => {
   font-size: 18px;
 }
 
+/* 左右分栏布局 */
+.content-layout {
+  display: flex;
+  gap: 20px;
+  height: 60vh;
+}
+
+.left-section {
+  flex: 1;
+  min-width: 0;
+  padding-right: 20px;
+  border-right: 1px solid #ebeef5;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.right-section {
+  flex: 1;
+  min-width: 0;
+  padding-right: 20px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+}
+
+.upload-tabs {
+  :deep(.el-tabs__header) {
+    margin-bottom: 16px;
+  }
+
+  :deep(.el-tabs__nav-wrap::after) {
+    display: none;
+  }
+
+  :deep(.el-tabs__item) {
+    font-weight: 500;
+    font-size: 15px;
+  }
+
+  :deep(.el-tabs__item.is-active) {
+    color: #409eff;
+  }
+}
+
 .detail-tabs {
   margin-bottom: 20px;
 }
@@ -839,5 +901,16 @@ onMounted(() => {
   padding-top: 15px;
 }
 
+/* 审核记录区域样式 */
+.review-records-section {
+  margin-top: 24px;
+  padding-top: 24px;
+}
+
+.section-divider {
+  height: 1px;
+  background: #ebeef5;
+  margin-bottom: 20px;
+}
 
 </style>

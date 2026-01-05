@@ -12,6 +12,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ApplicationBasicInfo: typeof import('./src/components/ApplicationBasicInfo.vue')['default']
+    ApplicationDetailDialog: typeof import('./src/components/common/ApplicationDetailDialog.vue')['default']
     ApplicationDocuments: typeof import('./src/components/ApplicationDocuments.vue')['default']
     ApplicationFiles: typeof import('./src/components/ApplicationFiles.vue')['default']
     ApplicationInvoices: typeof import('./src/components/ApplicationInvoices.vue')['default']
@@ -56,9 +57,9 @@ declare module 'vue' {
     ElTabPane: typeof import('element-plus/es')['ElTabPane']
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
-    ElText: typeof import('element-plus/es')['ElText']
     ElTimeline: typeof import('element-plus/es')['ElTimeline']
     ElTimelineItem: typeof import('element-plus/es')['ElTimelineItem']
+    ElUpload: typeof import('element-plus/es')['ElUpload']
     ErrorHandlingDemo: typeof import('./src/components/ErrorHandlingDemo.vue')['default']
     FileUploadSection: typeof import('./src/components/common/FileUploadSection.vue')['default']
     FinalReviewActions: typeof import('./src/components/FinalReviewActions.vue')['default']

@@ -107,8 +107,6 @@ export const useFinanceStore = defineStore('finance', () => {
         const updatedApp = await financeAPI.getFinanceApplicationDetail(id)
         currentFinanceApplication.value = updatedApp
       }
-
-      ElMessage.success('财务操作提交成功')
     } catch (error) {
       ElMessage.error('财务操作提交失败')
       console.error('Failed to process finance operation:', error)

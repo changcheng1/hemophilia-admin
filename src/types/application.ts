@@ -9,7 +9,7 @@ export interface ApplicationListItem {
 }
 
 export enum ApplicationStatus {
-  /** 草稿 */
+  /** 代补全资料 */
   DRAFT = 'draft',
   /** 已提交 */
   SUBMITTED = 'submitted',
@@ -37,7 +37,7 @@ export enum ApplicationStatus {
 
 // 状态标签映射
 export const ApplicationStatusLabels = {
-  [ApplicationStatus.DRAFT]: '草稿',
+  [ApplicationStatus.DRAFT]: '代补全资料',
   [ApplicationStatus.SUBMITTED]: '已提交',
   [ApplicationStatus.PENDING_INITIAL]: '待审核',
   [ApplicationStatus.INITIAL_REVIEW]: '初审中',

@@ -11,7 +11,7 @@
     <el-aside :width="sidebarWidth" class="sidebar" :class="{ collapsed: isCollapsed }">
       <div class="logo">
         <h2 v-if="!isCollapsed">王定国公益基金会管理系统</h2>
-        <h2 v-else class="logo-collapsed">援助</h2>
+        <h2 v-else class="logo-collapsed">申请</h2>
       </div>
 
       <el-menu
@@ -78,7 +78,12 @@
 
       <!-- Main content -->
       <el-main class="main-content">
-        <slot />
+        <div class="watermark-container">
+          <div class="watermark-layer"></div>
+          <div class="content-wrapper">
+            <slot />
+          </div>
+        </div>
       </el-main>
     </el-container>
   </el-container>
@@ -159,11 +164,49 @@ onMounted(() => {
   // Set up responsive handling
   handleResize()
   window.addEventListener('resize', handleResize)
+  
+  // Add watermark
+  addWatermark()
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
 })
+
+// Watermark functionality
+const addWatermark = () => {
+  const userName = authStore.user?.name || '管理员'
+  const userPhone = authStore.user?.phone || ''
+  const watermarkText = `${userName} ${userPhone}`
+  
+  const watermarkLayer = document.querySelector('.watermark-layer') as HTMLElement
+  if (!watermarkLayer) return
+  
+  // Create watermark canvas
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  
+  // Set canvas size
+  canvas.width = 300
+  canvas.height = 200
+  
+  // Set watermark style
+  ctx.font = '16px Arial'
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.rotate(-20 * Math.PI / 180)
+  
+  // Draw watermark text
+  ctx.fillText(watermarkText, canvas.width / 2, canvas.height / 2)
+  
+  // Convert canvas to data URL
+  const dataURL = canvas.toDataURL()
+  
+  // Set watermark as background
+  watermarkLayer.style.backgroundImage = `url(${dataURL})`
+}
 </script>
 
 <style scoped>
@@ -331,6 +374,33 @@ onUnmounted(() => {
 .main-content {
   background-color: #f0f2f5;
   overflow-y: auto;
+  padding: 0;
+}
+
+.watermark-container {
+  width: 100%;
+  min-height: 100%;
+  position: relative;
+}
+
+.watermark-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background-repeat: repeat;
+  background-position: 0 0;
+}
+
+.content-wrapper {
+  width: 100%;
+  min-height: 100%;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 /* Mobile overlay */

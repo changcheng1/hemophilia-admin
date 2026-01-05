@@ -102,8 +102,6 @@ export const useApplicationStore = defineStore('application', () => {
         const updatedApp = await applicationAPI.getApplicationDetail(id)
         currentApplication.value = updatedApp
       }
-
-      ElMessage.success('审核提交成功')
     } catch (error) {
       ElMessage.error('审核提交失败')
       console.error('Failed to submit review:', error)
@@ -166,8 +164,6 @@ export const useApplicationStore = defineStore('application', () => {
         const updatedApp = await applicationAPI.getApplicationDetail(id)
         currentApplication.value = updatedApp
       }
-
-      ElMessage.success('复核提交成功')
     } catch (error) {
       ElMessage.error('复核提交失败')
       console.error('Failed to submit final review:', error)

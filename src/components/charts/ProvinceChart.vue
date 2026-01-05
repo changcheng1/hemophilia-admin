@@ -75,7 +75,7 @@ const initChart = () => {
     },
     series: [
       {
-        name: '援助金额',
+        name: '申请金额',
         type: 'bar',
         barWidth: '60%',
         data: props.data.map(item => item.value),

@@ -106,10 +106,10 @@
             <el-descriptions-item label="申请号">
               {{ application.applicationNumber || '-' }}
             </el-descriptions-item>
-            <el-descriptions-item label="援助项目">
+            <el-descriptions-item label="申请项目">
               {{ application.donationProject || '-' }}
             </el-descriptions-item>
-            <el-descriptions-item label="援助期数">
+            <el-descriptions-item label="申请期数">
               {{ application.donationPeriod || '-' }}
             </el-descriptions-item>
             <el-descriptions-item label="申请时间">

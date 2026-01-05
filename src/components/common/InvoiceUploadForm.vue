@@ -1,5 +1,15 @@
 <template>
   <div class="invoice-upload-form">
+    <!-- 总金额显示 -->
+    <div class="total-amount-header">
+      <div class="amount-card">
+        <div class="amount-content">
+          <span class="amount-label">申请总金额</span>
+          <span class="amount-value">¥{{ formatAmount(totalAmount) }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- 交通费发票 -->
     <div class="file-group">
       <div class="group-header">
@@ -7,11 +17,6 @@
         <span class="group-count" v-if="transportInvoiceFiles.length > 0">
           ({{ transportInvoiceFiles.length }})
         </span>
-      </div>
-      
-      <div class="amount-info">
-        <span class="amount-label">报销金额：</span>
-        <span class="amount-value">{{ formatAmount(formData.transportReimbursementAmount) }}</span>
       </div>
       
       <div class="group-content">
@@ -74,11 +79,6 @@
         <span class="group-count" v-if="accommodationInvoiceFiles.length > 0">
           ({{ accommodationInvoiceFiles.length }})
         </span>
-      </div>
-      
-      <div class="amount-info">
-        <span class="amount-label">报销金额：</span>
-        <span class="amount-value">{{ formatAmount(formData.accommodationReimbursementAmount) }}</span>
       </div>
       
       <div class="group-content">
@@ -168,8 +168,7 @@ interface FileItem {
 }
 
 interface InvoiceData {
-  transportReimbursementAmount?: string | number
-  accommodationReimbursementAmount?: string | number
+  totalReimbursementAmount?: string | number
   transportInvoiceFiles?: FileItem[]
   accommodationInvoiceFiles?: FileItem[]
 }
@@ -191,6 +190,11 @@ const transportInvoiceFiles = computed(() => props.modelValue.transportInvoiceFi
 
 // 住宿费发票文件
 const accommodationInvoiceFiles = computed(() => props.modelValue.accommodationInvoiceFiles || [])
+
+// 总金额
+const totalAmount = computed(() => {
+  return parseFloat(String(props.modelValue.totalReimbursementAmount || 0)) || 0
+})
 
 // 获取处理后的文件 URL
 const getFileUrl = (file: FileItem): string => {
@@ -226,7 +230,7 @@ const handleImageError = (event: Event) => {
 // 格式化金额显示
 const formatAmount = (amount: string | number | undefined): string => {
   const num = parseFloat(String(amount || 0)) || 0
-  return num > 0 ? num.toFixed(2) + '元' : '0.00元'
+  return num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 // 格式化文件大小
@@ -244,6 +248,30 @@ const formatFileSize = (size: number | undefined): string => {
 
 <style scoped lang="scss">
 .invoice-upload-form {
+  .total-amount-header {
+    margin-bottom: 24px;
+
+    .amount-card {
+      .amount-content {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+
+        .amount-label {
+          font-size: 15px;
+          font-weight: 500;
+          color: #606266;
+        }
+        .amount-value {
+          font-size: 20px;
+          font-weight: 700;
+          color: red;
+          letter-spacing: 0.5px;
+        }
+      }
+    }
+  }
+
   .file-group {
     margin-bottom: 32px;
     
@@ -268,29 +296,6 @@ const formatFileSize = (size: number | undefined): string => {
         color: #666;
         font-size: 14px;
         font-weight: 500;
-      }
-    }
-
-    .amount-info {
-      margin-bottom: 16px;
-      padding: 12px 16px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border-left: 4px solid #1890ff;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      .amount-label {
-        color: #666;
-        font-size: 14px;
-        line-height: 1.6;
-      }
-
-      .amount-value {
-        color: #409eff;
-        font-size: 16px;
-        font-weight: 600;
       }
     }
 
@@ -416,33 +421,6 @@ const formatFileSize = (size: number | undefined): string => {
     }
   }
 
-  .total-amount {
-    margin-top: 24px;
-
-    .total-card {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 20px;
-      background: linear-gradient(135deg, #e8f4fd 0%, #f0f9ff 100%);
-      border: 1px solid #b3d8ff;
-      border-radius: 12px;
-
-      .total-label {
-        font-size: 16px;
-        font-weight: 500;
-        color: #606266;
-      }
-
-      .total-value {
-        font-size: 24px;
-        font-weight: 700;
-        color: #409eff;
-      }
-    }
-  }
-
   .preview-container {
     text-align: center;
 
@@ -465,6 +443,26 @@ const formatFileSize = (size: number | undefined): string => {
 // 响应式设计
 @media (max-width: 768px) {
   .invoice-upload-form {
+    .total-amount-header {
+      margin-bottom: 20px;
+
+      .amount-card {
+        .amount-content {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 6px;
+
+          .amount-label {
+            font-size: 14px;
+          }
+
+          .amount-value {
+            font-size: 22px;
+          }
+        }
+      }
+    }
+
     .file-group {
       .group-header {
         .group-title {
@@ -532,22 +530,6 @@ const formatFileSize = (size: number | undefined): string => {
           .placeholder-text {
             font-size: 13px;
           }
-        }
-      }
-    }
-
-    .total-amount {
-      .total-card {
-        padding: 16px;
-        flex-direction: column;
-        gap: 8px;
-
-        .total-label {
-          font-size: 14px;
-        }
-
-        .total-value {
-          font-size: 20px;
         }
       }
     }

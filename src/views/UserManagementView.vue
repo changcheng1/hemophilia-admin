@@ -109,7 +109,7 @@
               link
               @click="handleViewApplications(row)"
             >
-              查看信息
+              援助信息
             </el-button>
           </template>
         </el-table-column>

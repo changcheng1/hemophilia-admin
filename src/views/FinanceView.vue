@@ -14,7 +14,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item label="援助项目">
+            <el-form-item label="申请项目">
               <el-input
                 v-model="searchForm.donationProject"
                 placeholder="请输入"
@@ -84,6 +84,15 @@
         <div class="card-header">
           <span>抽查申请列表</span>
           <div class="header-buttons">
+            <el-upload
+              ref="uploadRef"
+              :auto-upload="false"
+              :show-file-list="false"
+              :on-change="handleFileChange"
+              accept=".xlsx,.xls"
+            >
+              <el-button type="success">导入信息</el-button>
+            </el-upload>
             <el-button @click="handleExportCommand" type="primary">导出打款信息</el-button>
           </div>
         </div>
@@ -97,8 +106,8 @@
         class="spot-check-table"
       >
         <el-table-column prop="applicationNumber" label="申请号" show-overflow-tooltip/>
-        <el-table-column prop="donationProject" label="援助项目" />
-        <el-table-column prop="donationPeriod" label="援助期数"  />
+        <el-table-column prop="donationProject" label="申请项目" />
+        <el-table-column prop="donationPeriod" label="申请期数"  />
         <el-table-column prop="phone" label="手机号" width="120">
           <template #default="{ row }">
             {{ row.user?.phone || '-' }}
@@ -107,6 +116,13 @@
         <el-table-column prop="recipientName" label="患者姓名"  />
         <el-table-column prop="idType" label="证件类型" />
         <el-table-column prop="idNumber" label="证件号码" />
+        <el-table-column prop="totalReimbursementAmount" label="发放金额" width="120">
+          <template #default="{ row }">
+            <span style="color: #f56c6c; font-weight: 500;">
+              ¥{{ ((row.disbursementAmount !== null && row.disbursementAmount !== undefined) ? row.disbursementAmount : row.totalReimbursementAmount || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+            </span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="申请状态" >
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
@@ -119,7 +135,7 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
               <el-button
@@ -128,6 +144,14 @@
                 @click="handleViewApplication(row)"
               >
                 查看
+              </el-button>
+              <el-button
+                v-if="row.status === 'final_approved'"
+                type="success"
+                size="small"
+                @click="handleDisburse(row)"
+              >
+                援助发放
               </el-button>
             </div>
           </template>
@@ -148,58 +172,15 @@
       </div>
     </el-card>
 
-    <!-- Spot Check Dialog -->
-    <el-dialog
-      v-model="spotCheckDialogVisible"
+    <!-- Application Detail Dialog -->
+    <ApplicationDetailDialog
+      v-model:visible="spotCheckDialogVisible"
       title="申请详情"
-      width="1200px"
-      top="5vh"
-      :close-on-click-modal="false"
-    >
-      <div v-if="currentApplicationDetail" class="spot-check-dialog-content">
-        <!-- 申请基本信息 -->
-        <div class="application-header">
-          <h3>{{ currentApplicationDetail.applicationNumber }} - {{ currentApplicationDetail.recipientName }}</h3>
-          <el-tag :type="getStatusType(currentApplicationDetail.status as string)">
-            {{ getStatusText(currentApplicationDetail.status as string) }}
-          </el-tag>
-        </div>
-
-        <!-- 详细信息标签页 -->
-        <el-tabs v-model="activeDetailTab" class="detail-tabs">
-          <!-- 基本信息 -->
-          <el-tab-pane label="基本信息" name="basic">
-            <BasicInfoDisplay
-              v-model="applicationBasicInfo"
-              :readonly="true"
-            />
-          </el-tab-pane>
-          
-          <!-- 资料上传 -->
-          <el-tab-pane label="资料上传" name="documents">
-            <FileUploadSection
-              v-model="applicationDocuments"
-              title="申请资料"
-              :readonly="true"
-            />
-          </el-tab-pane>
-
-          <!-- 发票上传 -->
-          <el-tab-pane label="发票上传" name="invoices">
-            <InvoiceUploadForm
-              v-model="applicationInvoices"
-              :readonly="true"
-            />
-          </el-tab-pane>
-        </el-tabs>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="spotCheckDialogVisible = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
+      :application-detail="currentApplicationDetail"
+      :status-type="currentApplicationDetail ? getStatusType(currentApplicationDetail.status as string) : 'info'"
+      :status-text="currentApplicationDetail ? getStatusText(currentApplicationDetail.status as string) : ''"
+      :hide-documents="true"
+    />
   </div>
 </template>
 
@@ -207,16 +188,19 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
+import axios from 'axios'
 
 import { useApplicationStore } from '@/stores/application'
+import { adminApplicationAPI } from '@/api/admin-application'
 import type { ApplicationListItem } from '@/types/application'
-import BasicInfoDisplay from '@/components/common/BasicInfoDisplay.vue'
-import InvoiceUploadForm from '@/components/common/InvoiceUploadForm.vue'
-import FileUploadSection from '@/components/common/FileUploadSection.vue'
+import ApplicationDetailDialog from '@/components/common/ApplicationDetailDialog.vue'
 
 const applicationStore = useApplicationStore()
+
+// Upload ref
+const uploadRef = ref()
 
 // Reactive data
 const searchForm = reactive({
@@ -251,6 +235,7 @@ interface ApplicationDetail {
     comment?: string
     createdAt: string
     reviewer?: {
+      id: number
       phone: string
     }
   }>
@@ -258,141 +243,6 @@ interface ApplicationDetail {
 }
 
 const currentApplicationDetail = ref<ApplicationDetail | null>(null)
-
-const activeDetailTab = ref('basic')
-
-
-
-// 当前申请的数据，转换为新组件格式
-const applicationBasicInfo = computed(() => {
-  if (!currentApplicationDetail.value) {
-    return {
-      applicationNumber: '',
-      status: '',
-      donationProject: '',
-      donationPeriod: '',
-      recipientName: '',
-      gender: '',
-      idType: '',
-      idNumber: '',
-      dateOfBirth: '',
-
-      householdLocation: '',
-      medicalInsuranceLocation: '',
-      treatmentLocation: '',
-      residenceAddress: '',
-      guardianName: '',
-      guardianRelationship: '',
-      guardianIdType: '',
-      guardianIdNumber: '',
-
-      bankAccountName: '',
-      bankName: '',
-      bankAccountNumber: '',
-      caseDescription: ''
-    }
-  }
-  
-  const app = currentApplicationDetail.value
-  return {
-    applicationNumber: String(app.applicationNumber || ''),
-    status: String(app.status || ''),
-    donationProject: String(app.donationProject || ''),
-    donationPeriod: String(app.donationPeriod || ''),
-    recipientName: String(app.recipientName || ''),
-    gender: String(app.gender || ''),
-    idType: String(app.idType || ''),
-    idNumber: String(app.idNumber || ''),
-    dateOfBirth: String(app.dateOfBirth || ''),
-
-    householdLocation: String(app.householdLocation || ''),
-    medicalInsuranceLocation: String(app.medicalInsuranceLocation || ''),
-    treatmentLocation: String(app.treatmentLocation || ''),
-    residenceAddress: String(app.residenceAddress || ''),
-    guardianName: String(app.guardianName || ''),
-    guardianRelationship: String(app.guardianRelationship || ''),
-    guardianIdType: String(app.guardianIdType || ''),
-    guardianIdNumber: String(app.guardianIdNumber || ''),
-
-    bankAccountName: String(app.bankAccountName || ''),
-    bankName: String(app.bankName || ''),
-    bankAccountNumber: String(app.bankAccountNumber || ''),
-    caseDescription: String(app.caseDescription || '')
-  }
-})
-
-const applicationDocuments = computed(() => {
-  if (!currentApplicationDetail.value?.files) return []
-  
-  // 过滤掉发票类型的文件，只返回其他文档
-  return currentApplicationDetail.value.files
-    .filter((file: Record<string, unknown>) => 
-      file.fileType !== 'transport_invoice' && 
-      file.fileType !== 'accommodation_invoice'
-    )
-    .map((file: Record<string, unknown>) => ({
-      id: Number(file.id) || undefined,
-      applicationId: Number(file.applicationId) || undefined,
-      fileType: String(file.fileType || ''),
-      originalName: String(file.originalName || ''),
-      filename: String(file.filename || ''),
-      path: String(file.path || ''),
-      url: String(file.url || ''),
-      mimetype: String(file.mimetype || ''),
-      size: String(file.size || ''),
-      createdAt: String(file.createdAt || ''),
-      // 兼容旧格式
-      name: String(file.originalName || ''),
-      uid: Number(file.id) || Date.now()
-    }))
-})
-
-const applicationInvoices = computed(() => {
-  if (!currentApplicationDetail.value) {
-    return {
-      transportReimbursementAmount: 0,
-      accommodationReimbursementAmount: 0,
-      transportInvoiceFiles: [],
-      accommodationInvoiceFiles: []
-    }
-  }
-  
-  const app = currentApplicationDetail.value
-  
-  // 根据 fileType 筛选交通费发票和住宿费发票
-  const transportFiles = (app.files || [])
-    .filter((file: Record<string, unknown>) => file.fileType === 'transport_invoice')
-    .map((file: Record<string, unknown>) => ({
-      id: file.id,
-      name: String(file.originalName || `交通费发票`),
-      url: String(file.url || ''),
-      uid: String(file.id || Date.now()),
-      status: 'success',
-      size: Number(file.size) || 0,
-      fileType: file.fileType,
-      originalName: file.originalName
-    }))
-  
-  const accommodationFiles = (app.files || [])
-    .filter((file: Record<string, unknown>) => file.fileType === 'accommodation_invoice')
-    .map((file: Record<string, unknown>) => ({
-      id: file.id,
-      name: String(file.originalName || `住宿费发票`),
-      url: String(file.url || ''),
-      uid: String(file.id || Date.now()),
-      status: 'success',
-      size: Number(file.size) || 0,
-      fileType: file.fileType,
-      originalName: file.originalName
-    }))
-  
-  return {
-    transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,
-    accommodationReimbursementAmount: Number(app.accommodationReimbursementAmount) || 0,
-    transportInvoiceFiles: transportFiles,
-    accommodationInvoiceFiles: accommodationFiles
-  }
-})
 
 // Computed properties
 const applications = computed(() => applicationStore.applications)
@@ -423,6 +273,8 @@ const getStatusType = (status: string): string => {
       return 'success'
     case 'rejected':
       return 'danger'
+    case 'disbursed':
+      return 'success'
     default:
       return 'info'
   }
@@ -434,13 +286,19 @@ const getStatusText = (status: string): string => {
     'initial_approved': '初审通过',
     'under_review': '初审存疑',
     'rejected': '审核退回',
-    'final_approved': '审核通过'
+    'final_approved': '审核通过',
+    'disbursed': '援助发放'
   }
   return statusMap[status] || '未知状态'
 }
 
 const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleString('zh-CN')
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
 }
 
 // 查看申请详情
@@ -461,14 +319,40 @@ const handleViewApplication = async (application: ApplicationListItem) => {
     
     currentApplicationDetail.value = detail as ApplicationDetail
     
-    // 重置标签页
-    activeDetailTab.value = 'basic'
-    
     // 显示对话框
     spotCheckDialogVisible.value = true
   } catch (error) {
     console.error('获取申请详情失败:', error)
     ElMessage.error('获取申请详情失败')
+  }
+}
+
+// 处理援助发放
+const handleDisburse = async (application: ApplicationListItem) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要将申请 ${application.applicationNumber} 标记为援助发放吗？`,
+      '确认发放',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    await adminApplicationAPI.disburseApplication(application.id, {
+      comment: '财务发放完成'
+    })
+
+    ElMessage.success('援助发放成功')
+    
+    // 刷新列表
+    fetchSpotCheckApplications()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('援助发放失败:', error)
+      ElMessage.error(error.response?.data?.message || '援助发放失败')
+    }
   }
 }
 
@@ -497,12 +381,12 @@ const handleReset = () => {
 
 
 const handleSizeChange = (size: number) => {
-  pageSize.value = size
+  applicationStore.setPageSize(size)
   fetchSpotCheckApplications()
 }
 
 const handleCurrentChange = (page: number) => {
-  currentPage.value = page
+  applicationStore.setPage(page)
   fetchSpotCheckApplications()
 }
 
@@ -528,8 +412,8 @@ const fetchSpotCheckApplications = () => {
   // 重置随机抽查状态
   showingRandomResults.value = false
 
-    // 默认查询审核通过的申请（可以进行抽查的）
-    params.status = 'final_approved'
+  // 查询审核通过和援助发放的申请
+  params.reviewableStatuses = ['final_approved', 'disbursed']
   
   if (searchForm.dateRange && searchForm.dateRange.length === 2) {
     params.startDate = searchForm.dateRange[0]
@@ -542,92 +426,410 @@ const fetchSpotCheckApplications = () => {
   })
 }
 
-
-
-
-
-
-
-
 // 处理导出命令
-const handleExportCommand = () => {
-  if (applications.value.length === 0) {
-    ElMessage.warning('没有可导出的数据')
-    return
-  }
-
-  ElMessageBox.confirm(
-    `确定要导出 ${applications.value.length} 条打款信息吗？`,
-    '确认导出',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'info',
+const handleExportCommand = async () => {
+  try {
+    // 获取总数
+    const totalCount = total.value
+    
+    if (totalCount === 0) {
+      ElMessage.warning('没有可导出的数据')
+      return
     }
-  ).then(() => {
-      exportToExcel()
-  }).catch(() => {
-    // 用户取消
-  })
+
+    const confirmed = await ElMessageBox.confirm(
+      `确定要导出全部 ${totalCount} 条打款信息吗？`,
+      '确认导出',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info',
+      }
+    ).catch(() => false)
+
+    if (!confirmed) {
+      return
+    }
+
+    // 导出所有数据
+    await exportAllToExcel()
+  } catch (error) {
+    console.error('导出失败:', error)
+  }
 }
 
-
-// 导出Excel
-const exportToExcel = () => {
+// 导出所有数据到Excel（带发票图片）
+const exportAllToExcel = async () => {
   try {
-    // 准备Excel数据
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const excelData = applications.value.map((app: any, index: number) => ({
-      '序号': index + 1,
-      '姓名': app.recipientName || '-',
-      '手机号': app.user?.phone || '-',
-      '身份证号': app.idNumber || '-',
-      '账户名': app.bankAccountName || '-',
-      '开户银行': app.bankName || '-',
-      '银行账号': app.bankAccountNumber || '-',
-      '常住地址': app.residenceAddress || '-',
-      '就诊地': app.treatmentLocation || '-',
-      '申请时间': app.createdAt ? new Date(app.createdAt).toLocaleDateString('zh-CN') : '-',
-      '审核状态': getStatusText(app.status),
-      '援助金额': ((Number(app.transportReimbursementAmount) || 0) + (Number(app.accommodationReimbursementAmount) || 0)).toFixed(2)
-    }))
-
-    // 创建工作簿和工作表
-    const worksheet = XLSX.utils.json_to_sheet(excelData)
-    const workbook = XLSX.utils.book_new()
+    // 构建查询参数（不包含分页）
+    const params: Record<string, unknown> = {}
     
-    // 设置列宽
-    const colWidths = [
-      { wch: 8 },  // 序号
-      { wch: 12 }, // 姓名
-      { wch: 15 }, // 手机号
-      { wch: 20 }, // 身份证号
-      { wch: 12 }, // 账户名
-      { wch: 15 }, // 开户银行
-      { wch: 20 }, // 银行账号
-      { wch: 25 }, // 常住地址
-      { wch: 20 }, // 就诊地
-      { wch: 12 }, // 申请时间
-      { wch: 12 }, // 审核状态
-      { wch: 12 }  // 援助金额
-    ]
-    worksheet['!cols'] = colWidths
+    if (searchForm.applicationNumber) {
+      params.applicationNumber = searchForm.applicationNumber
+    }
+    if (searchForm.donationProject) {
+      params.donationProject = searchForm.donationProject
+    }
+    if (searchForm.phone) {
+      params.phone = searchForm.phone
+    }
+    if (searchForm.recipientName) {
+      params.recipientName = searchForm.recipientName
+    }
+    if (searchForm.idNumber) {
+      params.idNumber = searchForm.idNumber
+    }
+    
+    // 仅导出援助发放状态的数据
+    params.status = 'disbursed'
+    
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.startDate = searchForm.dateRange[0]
+      params.endDate = searchForm.dateRange[1]
+    }
+    
+    // 获取所有数据（设置一个很大的 limit）
+    params.page = 1
+    params.limit = 10000
+    
+    const response = await adminApplicationAPI.searchApplications(params)
+    const allApplications = response.data
+    
+    if (allApplications.length === 0) {
+      ElMessage.warning('没有可导出的援助发放数据')
+      return
+    }
+    // 创建工作簿和工作表
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('打款信息表')
 
-    // 添加工作表到工作簿
-    XLSX.utils.book_append_sheet(workbook, worksheet, '打款信息表')
+    // 设置列（包含申请号和发放金额）
+    worksheet.columns = [
+      { header: '申请号', key: 'applicationNumber', width: 20 },
+      { header: '姓名', key: 'name', width: 12 },
+      { header: '手机号', key: 'phone', width: 15 },
+      { header: '身份证号', key: 'idNumber', width: 20 },
+      { header: '账户名', key: 'accountName', width: 12 },
+      { header: '开户银行', key: 'bankName', width: 15 },
+      { header: '开户行所在区域', key: 'bankLocation', width: 20 },
+      { header: '银行账号', key: 'accountNumber', width: 20 },
+      { header: '常住地址', key: 'address', width: 25 },
+      { header: '就诊地', key: 'treatment', width: 20 },
+      { header: '援助项目', key: 'donationProject', width: 15 },
+      { header: '项目期数', key: 'donationPeriod', width: 12 },
+      { header: '申请时间', key: 'applyDate', width: 12 },
+      { header: '审核状态', key: 'status', width: 12 },
+      { header: '发放金额', key: 'disbursementAmount', width: 12 },
+      { header: '申请总金额', key: 'totalAmount', width: 12 },
+      { header: '交通发票', key: 'transportInvoice', width: 30 },
+      { header: '住宿发票', key: 'accommodationInvoice', width: 30 }
+    ]
+
+    // 设置表头样式
+    worksheet.getRow(1).font = { bold: true }
+    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' }
+
+    // 添加数据和图片
+    for (let i = 0; i < allApplications.length; i++) {
+      const app = allApplications[i] as any
+      
+      const totalAmount = Number(app.totalReimbursementAmount) || 0
+      const disbursementAmount = Number(app.disbursementAmount !== null && app.disbursementAmount !== undefined ? app.disbursementAmount : app.totalReimbursementAmount) || 0
+
+      // 添加数据行（包含申请号和发放金额）
+      const row = worksheet.addRow({
+        applicationNumber: app.applicationNumber || '-',
+        name: app.recipientName || '-',
+        phone: app.user?.phone || '-',
+        idNumber: app.idNumber || '-',
+        accountName: app.bankAccountName || '-',
+        bankName: app.bankName || '-',
+        bankLocation: app.bankLocation || '-',
+        accountNumber: app.bankAccountNumber || '-',
+        address: app.residenceAddress || '-',
+        treatment: app.treatmentLocation || '-',
+        donationProject: app.donationProject || '-',
+        donationPeriod: app.donationPeriod || '-',
+        applyDate: app.createdAt ? new Date(app.createdAt).toLocaleDateString('zh-CN') : '-',
+        status: getStatusText(app.status),
+        disbursementAmount: disbursementAmount.toFixed(2),
+        totalAmount: totalAmount.toFixed(2),
+        transportInvoice: '',
+        accommodationInvoice: ''
+      })
+
+      // 设置行高以容纳图片（根据发票数量动态调整，每张图片40px高度 + 20px间距）
+      const maxInvoices = Math.max(
+        app.transportInvoices?.length || 0,
+        app.accommodationInvoices?.length || 0
+      )
+      row.height = maxInvoices > 0 ? maxInvoices * 60 : 60
+
+      // 添加交通发票图片（固定大小80x40，间距20px，支持多张）
+      if (app.transportInvoices && app.transportInvoices.length > 0) {
+        for (let j = 0; j < app.transportInvoices.length; j++) {
+          const invoice = app.transportInvoices[j]
+          try {
+            const imageBuffer = await downloadImage(invoice.url)
+            if (imageBuffer) {
+              const imageId = workbook.addImage({
+                buffer: imageBuffer,
+                extension: getImageExtension(invoice.url)
+              })
+              
+              // 固定大小80x40，垂直间距20px（交通发票在第16列，索引为16）
+              worksheet.addImage(imageId, {
+                tl: { col: 16, row: i + 1 + j * 0.8 } as any,
+                ext: { width: 80, height: 40 },
+                editAs: 'oneCell'
+              })
+            }
+          } catch (error) {
+            console.error('添加交通发票图片失败:', error)
+          }
+        }
+      }
+
+      // 添加住宿发票图片（固定大小80x40，间距20px，支持多张）
+      if (app.accommodationInvoices && app.accommodationInvoices.length > 0) {
+        for (let j = 0; j < app.accommodationInvoices.length; j++) {
+          const invoice = app.accommodationInvoices[j]
+          try {
+            const imageBuffer = await downloadImage(invoice.url)
+            if (imageBuffer) {
+              const imageId = workbook.addImage({
+                buffer: imageBuffer,
+                extension: getImageExtension(invoice.url)
+              })
+              
+              // 固定大小80x40，垂直间距20px（住宿发票在第17列，索引为17）
+              worksheet.addImage(imageId, {
+                tl: { col: 17, row: i + 1 + j * 0.8 } as any,
+                ext: { width: 80, height: 40 },
+                editAs: 'oneCell'
+              })
+            }
+          } catch (error) {
+            console.error('添加住宿发票图片失败:', error)
+          }
+        }
+      }
+    }
 
     // 生成Excel文件并下载
-    const fileName = `打款信息表_${new Date().toISOString().slice(0, 10)}.xls`
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
-    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
+    const fileName = `打款信息表_${new Date().toISOString().slice(0, 10)}.xlsx`
     saveAs(blob, fileName)
     
-    ElMessage.success('Excel导出成功')
+    ElMessage.success(`Excel导出成功！共导出 ${allApplications.length} 条数据`)
   } catch (error) {
     console.error('Excel导出失败:', error)
-    ElMessage.error('Excel导出失败')
+    ElMessage.error('Excel导出失败: ' + (error as Error).message)
   }
 }
+
+// 下载图片并转换为Buffer
+const downloadImage = async (url: string): Promise<ArrayBuffer | null> => {
+  try {
+    const response = await axios.get(url, { 
+      responseType: 'arraybuffer',
+      timeout: 10000
+    })
+    return response.data
+  } catch (error) {
+    console.error('下载图片失败:', url, error)
+    return null
+  }
+}
+
+// 获取图片扩展名
+const getImageExtension = (url: string): 'png' | 'jpeg' | 'gif' => {
+  const ext = url.split('.').pop()?.toLowerCase()
+  if (ext === 'png') return 'png'
+  if (ext === 'gif') return 'gif'
+  return 'jpeg'
+}
+
+// 处理文件选择
+const handleFileChange = async (file: { raw?: File }) => {
+  try {
+    const rawFile = file.raw
+    if (!rawFile) {
+      ElMessage.error('请选择文件')
+      return
+    }
+
+    // 验证文件类型
+    const fileName = rawFile.name
+    if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+      ElMessage.error('只支持 Excel 文件格式（.xlsx 或 .xls）')
+      return
+    }
+
+    // 读取Excel文件
+    const workbook = new ExcelJS.Workbook()
+    const arrayBuffer = await rawFile.arrayBuffer()
+    await workbook.xlsx.load(arrayBuffer)
+    
+    const worksheet = workbook.getWorksheet(1)
+    if (!worksheet) {
+      ElMessage.error('Excel文件中没有找到工作表')
+      return
+    }
+
+    // 解析数据（跳过表头）
+    const importData: {
+      applicationNumber: string
+      name: string
+      phone: string
+      idNumber: string
+      accountName: string
+      bankName: string
+      bankLocation: string
+      accountNumber: string
+      address: string
+      treatment: string
+      donationProject: string
+      donationPeriod: string
+      applyDate: string
+      status: string
+      disbursementAmount: string
+      totalAmount: string
+    }[] = []
+    
+    const validationErrors: string[] = []
+    
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return // 跳过表头
+      
+      const rowData = {
+        applicationNumber: row.getCell(1).value?.toString().trim() || '',
+        name: row.getCell(2).value?.toString().trim() || '',
+        phone: row.getCell(3).value?.toString().trim() || '',
+        idNumber: row.getCell(4).value?.toString().trim() || '',
+        accountName: row.getCell(5).value?.toString().trim() || '',
+        bankName: row.getCell(6).value?.toString().trim() || '',
+        bankLocation: row.getCell(7).value?.toString().trim() || '',
+        accountNumber: row.getCell(8).value?.toString().trim() || '',
+        address: row.getCell(9).value?.toString().trim() || '',
+        treatment: row.getCell(10).value?.toString().trim() || '',
+        donationProject: row.getCell(11).value?.toString().trim() || '',
+        donationPeriod: row.getCell(12).value?.toString().trim() || '',
+        applyDate: row.getCell(13).value?.toString().trim() || '',
+        status: row.getCell(14).value?.toString().trim() || '',
+        disbursementAmount: row.getCell(15).value?.toString().trim() || '',
+        totalAmount: row.getCell(16).value?.toString().trim() || ''
+      }
+      
+      // 校验必填字段
+      const requiredFields = [
+        { field: 'applicationNumber', label: '申请号', value: rowData.applicationNumber },
+        { field: 'name', label: '姓名', value: rowData.name },
+        { field: 'phone', label: '手机号', value: rowData.phone },
+        { field: 'idNumber', label: '身份证号', value: rowData.idNumber },
+        { field: 'accountName', label: '账户名', value: rowData.accountName },
+        { field: 'bankName', label: '开户银行', value: rowData.bankName },
+        { field: 'bankLocation', label: '开户行所在区域', value: rowData.bankLocation },
+        { field: 'accountNumber', label: '银行账号', value: rowData.accountNumber },
+        { field: 'address', label: '常住地址', value: rowData.address },
+        { field: 'treatment', label: '就诊地', value: rowData.treatment },
+        { field: 'donationProject', label: '援助项目', value: rowData.donationProject },
+        { field: 'donationPeriod', label: '项目期数', value: rowData.donationPeriod },
+        { field: 'applyDate', label: '申请时间', value: rowData.applyDate },
+        { field: 'status', label: '审核状态', value: rowData.status },
+        { field: 'disbursementAmount', label: '发放金额', value: rowData.disbursementAmount }
+      ]
+      
+      const missingFields: string[] = []
+      requiredFields.forEach(({ label, value }) => {
+        if (!value) {
+          missingFields.push(label)
+        }
+      })
+      
+      if (missingFields.length > 0) {
+        validationErrors.push(`第 ${rowNumber} 行缺少必填字段: ${missingFields.join('、')}`)
+      } else {
+        // 验证手机号格式
+        if (!/^1[3-9]\d{9}$/.test(rowData.phone)) {
+          validationErrors.push(`第 ${rowNumber} 行手机号格式不正确: ${rowData.phone}`)
+        }
+        
+        // 验证身份证号格式（简单验证长度）
+        if (rowData.idNumber.length !== 15 && rowData.idNumber.length !== 18) {
+          validationErrors.push(`第 ${rowNumber} 行身份证号格式不正确: ${rowData.idNumber}`)
+        }
+        
+        // 验证金额格式
+        if (isNaN(parseFloat(rowData.disbursementAmount))) {
+          validationErrors.push(`第 ${rowNumber} 行发放金额格式不正确: ${rowData.disbursementAmount}`)
+        }
+        
+        // 验证申请总金额格式（如果提供）
+        if (rowData.totalAmount && isNaN(parseFloat(rowData.totalAmount))) {
+          validationErrors.push(`第 ${rowNumber} 行申请总金额格式不正确: ${rowData.totalAmount}`)
+        }
+        
+        // 如果没有错误，添加到导入数据
+        if (validationErrors.length === 0 || !validationErrors.some(err => err.includes(`第 ${rowNumber} 行`))) {
+          importData.push(rowData)
+        }
+      }
+    })
+
+    // 如果有校验错误，显示错误信息
+    if (validationErrors.length > 0) {
+      const errorMessage = validationErrors.slice(0, 5).join('\n') + 
+        (validationErrors.length > 5 ? `\n... 还有 ${validationErrors.length - 5} 个错误` : '')
+      ElMessageBox.alert(errorMessage, '数据校验失败', {
+        confirmButtonText: '确定',
+        type: 'error',
+        dangerouslyUseHTMLString: false
+      })
+      return
+    }
+
+    if (importData.length === 0) {
+      ElMessage.warning('Excel文件中没有有效数据')
+      return
+    }
+
+    // 确认导入
+    await ElMessageBox.confirm(
+      `确定要导入 ${importData.length} 条数据吗？`,
+      '确认导入',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'info',
+      }
+    )
+
+    // 调用后端API导入数据
+    console.log('准备导入的数据:', importData.slice(0, 2)); // 打印前2条数据
+    const result = await adminApplicationAPI.importApplications(importData)
+    
+    if (result.failed > 0) {
+      ElMessage.warning(`导入完成：成功 ${result.success} 条，失败 ${result.failed} 条`)
+      console.error('导入错误:', result.errors)
+    } else {
+      ElMessage.success(`成功导入 ${result.success} 条数据`)
+    }
+    
+    // 刷新列表
+    fetchSpotCheckApplications()
+  } catch (error: unknown) {
+    if (error !== 'cancel') {
+      console.error('导入失败:', error)
+      const errorMessage = error instanceof Error ? error.message : '导入失败'
+      ElMessage.error(errorMessage)
+    }
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   fetchSpotCheckApplications()
@@ -715,51 +917,8 @@ onMounted(() => {
   color: #606266;
 }
 
-/* 抽查对话框样式 */
-.spot-check-dialog-content {
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.application-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.application-header h3 {
-  margin: 0;
-  color: #303133;
-  font-size: 18px;
-}
-
-.detail-tabs {
-  margin-bottom: 20px;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
 /* 随机抽查对话框样式 */
 .random-spot-check-content {
   padding: 20px 0;
-}
-
-
-
-
-
-:deep(.el-dialog__body) {
-  padding: 20px;
-}
-
-:deep(.el-tabs__content) {
-  padding-top: 15px;
 }
 </style>

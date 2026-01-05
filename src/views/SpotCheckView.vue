@@ -14,7 +14,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item label="援助项目">
+            <el-form-item label="申请项目">
               <el-input
                 v-model="searchForm.donationProject"
                 placeholder="请输入"
@@ -120,8 +120,8 @@
         class="spot-check-table"
       >
         <el-table-column prop="applicationNumber" label="申请号" show-overflow-tooltip/>
-        <el-table-column prop="donationProject" label="援助项目"/>
-        <el-table-column prop="donationPeriod" label="援助期数" />
+        <el-table-column prop="donationProject" label="申请项目"/>
+        <el-table-column prop="donationPeriod" label="申请期数" />
         <el-table-column prop="phone" label="手机号">
           <template #default="{ row }">
             {{ row.user?.phone || '-' }}
@@ -172,57 +172,16 @@
     </el-card>
 
     <!-- Spot Check Dialog -->
-    <el-dialog
-      v-model="spotCheckDialogVisible"
+    <ApplicationDetailDialog
+      v-model:visible="spotCheckDialogVisible"
       title="申请详情"
-      width="1200px"
-      top="5vh"
-      :close-on-click-modal="false"
-    >
-      <div v-if="currentApplicationDetail" class="spot-check-dialog-content">
-        <!-- 申请基本信息 -->
-        <div class="application-header">
-          <h3>{{ currentApplicationDetail.applicationNumber }} - {{ currentApplicationDetail.recipientName }}</h3>
-          <el-tag :type="getStatusType(currentApplicationDetail.status as string)">
-            {{ getStatusText(currentApplicationDetail.status as string) }}
-          </el-tag>
-        </div>
-
-        <!-- 详细信息标签页 -->
-        <el-tabs v-model="activeDetailTab" class="detail-tabs">
-          <!-- 基本信息 -->
-          <el-tab-pane label="基本信息" name="basic">
-            <BasicInfoDisplay
-              v-model="applicationBasicInfo"
-              :readonly="true"
-            />
-          </el-tab-pane>
-          
-          <!-- 资料上传 -->
-          <el-tab-pane label="资料上传" name="documents">
-            <FileUploadSection
-              v-model="applicationDocuments"
-              title="申请资料"
-              :readonly="true"
-            />
-          </el-tab-pane>
-
-          <!-- 发票上传 -->
-          <el-tab-pane label="发票上传" name="invoices">
-            <InvoiceUploadForm
-              v-model="applicationInvoices"
-              :readonly="true"
-            />
-          </el-tab-pane>
-        </el-tabs>
-      </div>
-
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="spotCheckDialogVisible = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
+      :application-detail="currentApplicationDetail"
+      :status-type="currentApplicationDetail ? getStatusType(currentApplicationDetail.status as string) : 'info'"
+      :status-text="currentApplicationDetail ? getStatusText(currentApplicationDetail.status as string) : ''"
+      :show-reviews="true"
+      :reviews="applicationReviews"
+      :loading-reviews="loadingReviews"
+    />
 
     <!-- Random Spot Check Dialog -->
     <el-dialog
@@ -270,9 +229,7 @@ import { ElMessage } from 'element-plus'
 
 import { useApplicationStore } from '@/stores/application'
 import type { ApplicationListItem } from '@/types/application'
-import BasicInfoDisplay from '@/components/common/BasicInfoDisplay.vue'
-import InvoiceUploadForm from '@/components/common/InvoiceUploadForm.vue'
-import FileUploadSection from '@/components/common/FileUploadSection.vue'
+import ApplicationDetailDialog from '@/components/common/ApplicationDetailDialog.vue'
 
 const applicationStore = useApplicationStore()
 
@@ -311,6 +268,7 @@ interface ApplicationDetail {
     comment?: string
     createdAt: string
     reviewer?: {
+      id: number
       phone: string
     }
   }>
@@ -319,142 +277,23 @@ interface ApplicationDetail {
 
 const currentApplicationDetail = ref<ApplicationDetail | null>(null)
 
-const activeDetailTab = ref('basic')
-
 const randomSpotCheckForm = reactive({
   count: 5
 })
 
-// 当前申请的数据，转换为新组件格式
-const applicationBasicInfo = computed(() => {
-  if (!currentApplicationDetail.value) {
-    return {
-      applicationNumber: '',
-      status: '',
-      donationProject: '',
-      donationPeriod: '',
-      recipientName: '',
-      gender: '',
-      idType: '',
-      idNumber: '',
-      dateOfBirth: '',
-
-      householdLocation: '',
-      medicalInsuranceLocation: '',
-      treatmentLocation: '',
-      residenceAddress: '',
-      guardianName: '',
-      guardianRelationship: '',
-      guardianIdType: '',
-      guardianIdNumber: '',
-
-      bankAccountName: '',
-      bankName: '',
-      bankAccountNumber: '',
-      caseDescription: ''
-    }
+// 审核记录相关
+const applicationReviews = ref<Array<{
+  id: number
+  stage: string
+  result: string
+  comment?: string
+  createdAt: string
+  reviewer?: {
+    id: number
+    phone: string
   }
-  
-  const app = currentApplicationDetail.value
-  return {
-    applicationNumber: String(app.applicationNumber || ''),
-    status: String(app.status || ''),
-    donationProject: String(app.donationProject || ''),
-    donationPeriod: String(app.donationPeriod || ''),
-    recipientName: String(app.recipientName || ''),
-    gender: String(app.gender || ''),
-    idType: String(app.idType || ''),
-    idNumber: String(app.idNumber || ''),
-    dateOfBirth: String(app.dateOfBirth || ''),
-
-    householdLocation: String(app.householdLocation || ''),
-    medicalInsuranceLocation: String(app.medicalInsuranceLocation || ''),
-    treatmentLocation: String(app.treatmentLocation || ''),
-    residenceAddress: String(app.residenceAddress || ''),
-    guardianName: String(app.guardianName || ''),
-    guardianRelationship: String(app.guardianRelationship || ''),
-    guardianIdType: String(app.guardianIdType || ''),
-    guardianIdNumber: String(app.guardianIdNumber || ''),
-
-    bankAccountName: String(app.bankAccountName || ''),
-    bankName: String(app.bankName || ''),
-    bankAccountNumber: String(app.bankAccountNumber || ''),
-    caseDescription: String(app.caseDescription || '')
-  }
-})
-
-const applicationDocuments = computed(() => {
-  if (!currentApplicationDetail.value?.files) return []
-  
-  // 过滤掉发票类型的文件，只返回其他文档
-  return currentApplicationDetail.value.files
-    .filter((file: Record<string, unknown>) => 
-      file.fileType !== 'transport_invoice' && 
-      file.fileType !== 'accommodation_invoice'
-    )
-    .map((file: Record<string, unknown>) => ({
-      id: Number(file.id) || undefined,
-      applicationId: Number(file.applicationId) || undefined,
-      fileType: String(file.fileType || ''),
-      originalName: String(file.originalName || ''),
-      filename: String(file.filename || ''),
-      path: String(file.path || ''),
-      url: String(file.url || ''),
-      mimetype: String(file.mimetype || ''),
-      size: String(file.size || ''),
-      createdAt: String(file.createdAt || ''),
-      // 兼容旧格式
-      name: String(file.originalName || ''),
-      uid: Number(file.id) || Date.now()
-    }))
-})
-
-const applicationInvoices = computed(() => {
-  if (!currentApplicationDetail.value) {
-    return {
-      transportReimbursementAmount: 0,
-      accommodationReimbursementAmount: 0,
-      transportInvoiceFiles: [],
-      accommodationInvoiceFiles: []
-    }
-  }
-  
-  const app = currentApplicationDetail.value
-  
-  // 根据 fileType 筛选交通费发票和住宿费发票
-  const transportFiles = (app.files || [])
-    .filter((file: Record<string, unknown>) => file.fileType === 'transport_invoice')
-    .map((file: Record<string, unknown>) => ({
-      id: file.id,
-      name: String(file.originalName || `交通费发票`),
-      url: String(file.url || ''),
-      uid: String(file.id || Date.now()),
-      status: 'success',
-      size: Number(file.size) || 0,
-      fileType: file.fileType,
-      originalName: file.originalName
-    }))
-  
-  const accommodationFiles = (app.files || [])
-    .filter((file: Record<string, unknown>) => file.fileType === 'accommodation_invoice')
-    .map((file: Record<string, unknown>) => ({
-      id: file.id,
-      name: String(file.originalName || `住宿费发票`),
-      url: String(file.url || ''),
-      uid: String(file.id || Date.now()),
-      status: 'success',
-      size: Number(file.size) || 0,
-      fileType: file.fileType,
-      originalName: file.originalName
-    }))
-  
-  return {
-    transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,
-    accommodationReimbursementAmount: Number(app.accommodationReimbursementAmount) || 0,
-    transportInvoiceFiles: transportFiles,
-    accommodationInvoiceFiles: accommodationFiles
-  }
-})
+}>>([])
+const loadingReviews = ref(false)
 
 // Computed properties
 const applications = computed(() => applicationStore.applications)
@@ -469,13 +308,15 @@ const pageSize = computed({
   set: (value) => applicationStore.setPageSize(value)
 })
 
-// 抽查相关状态 - 主要针对审核通过的申请
+// 抽查相关状态 - 显示所有状态
 const spotCheckStatuses = [
   { label: '全部', value: '' },
-  { label: '审核通过', value: 'final_approved' },
+  { label: '待审核', value: 'pending_initial' },
   { label: '初审通过', value: 'initial_approved' },
   { label: '初审存疑', value: 'under_review' },
-  { label: '审核退回', value: 'rejected' }
+  { label: '审核通过', value: 'final_approved' },
+  { label: '审核退回', value: 'rejected' },
+  { label: '援助发放', value: 'disbursed' }
 ]
 
 // 添加一个标识来跟踪是否显示随机抽查结果
@@ -484,6 +325,8 @@ const showingRandomResults = ref(false)
 // Methods
 const getStatusType = (status: string): string => {
   switch (status) {
+    case 'draft':
+      return 'info'
     case 'pending_initial':
       return 'info'
     case 'under_review':
@@ -494,6 +337,8 @@ const getStatusType = (status: string): string => {
       return 'success'
     case 'rejected':
       return 'danger'
+    case 'disbursed':
+      return 'success'
     default:
       return 'info'
   }
@@ -501,11 +346,13 @@ const getStatusType = (status: string): string => {
 
 const getStatusText = (status: string): string => {
   const statusMap: Record<string, string> = {
+    'draft': '草稿',
     'pending_initial': '待审核',
     'initial_approved': '初审通过',
     'under_review': '初审存疑',
     'rejected': '审核退回',
-    'final_approved': '审核通过'
+    'final_approved': '审核通过',
+    'disbursed': '援助发放'
   }
   return statusMap[status] || '未知状态'
 }
@@ -539,12 +386,12 @@ const handleReset = () => {
 
 
 const handleSizeChange = (size: number) => {
-  pageSize.value = size
+  applicationStore.setPageSize(size)
   fetchSpotCheckApplications()
 }
 
 const handleCurrentChange = (page: number) => {
-  currentPage.value = page
+  applicationStore.setPage(page)
   fetchSpotCheckApplications()
 }
 
@@ -570,13 +417,11 @@ const fetchSpotCheckApplications = () => {
   // 重置随机抽查状态
   showingRandomResults.value = false
   
-  // 抽查管理页面查询逻辑
+  // 抽查管理页面查询逻辑 - 显示所有申请记录
   if (searchForm.status) {
     params.status = searchForm.status
-  } else {
-    // 默认查询审核通过的申请（可以进行抽查的）
-    params.status = 'final_approved'
   }
+  // 不设置默认状态，显示所有申请
   
   if (searchForm.dateRange && searchForm.dateRange.length === 2) {
     params.startDate = searchForm.dateRange[0]
@@ -588,10 +433,6 @@ const fetchSpotCheckApplications = () => {
   applicationStore.searchApplications(params).then(() => {
   })
 }
-
-
-
-
 
 // 查看申请详情
 const handleViewApplication = async (application: ApplicationListItem) => {
@@ -611,14 +452,28 @@ const handleViewApplication = async (application: ApplicationListItem) => {
     
     currentApplicationDetail.value = detail as ApplicationDetail
     
-    // 重置标签页
-    activeDetailTab.value = 'basic'
+    // 获取审核记录
+    await fetchApplicationReviews(application.id)
     
     // 显示对话框
     spotCheckDialogVisible.value = true
   } catch (error) {
     console.error('获取申请详情失败:', error)
     ElMessage.error('获取申请详情失败')
+  }
+}
+
+// 获取审核记录
+const fetchApplicationReviews = async (applicationId: number) => {
+  loadingReviews.value = true
+  try {
+    const reviews = await applicationStore.getApplicationReviews(applicationId)
+    applicationReviews.value = reviews || []
+  } catch (error) {
+    console.error('❌ 获取审核记录失败:', error)
+    applicationReviews.value = []
+  } finally {
+    loadingReviews.value = false
   }
 }
 
@@ -751,51 +606,8 @@ onMounted(() => {
   color: #606266;
 }
 
-/* 抽查对话框样式 */
-.spot-check-dialog-content {
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.application-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.application-header h3 {
-  margin: 0;
-  color: #303133;
-  font-size: 18px;
-}
-
-.detail-tabs {
-  margin-bottom: 20px;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
 /* 随机抽查对话框样式 */
 .random-spot-check-content {
   padding: 20px 0;
-}
-
-
-
-
-
-:deep(.el-dialog__body) {
-  padding: 20px;
-}
-
-:deep(.el-tabs__content) {
-  padding-top: 15px;
 }
 </style>

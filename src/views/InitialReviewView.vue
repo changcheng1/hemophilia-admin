@@ -14,7 +14,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item label="援助项目">
+            <el-form-item label="申请项目">
               <el-input
                 v-model="searchForm.donationProject"
                 placeholder="请输入"
@@ -112,8 +112,8 @@
         class="review-table"
       >
         <el-table-column prop="applicationNumber" label="申请号" show-overflow-tooltip/>
-        <el-table-column prop="donationProject" label="援助项目"  />
-        <el-table-column prop="donationPeriod" label="援助期数"  />
+        <el-table-column prop="donationProject" label="申请项目"  />
+        <el-table-column prop="donationPeriod" label="申请期数"  />
         <el-table-column prop="phone" label="手机号" >
           <template #default="{ row }">
             {{ row.user?.phone || '-' }}
@@ -137,6 +137,15 @@
         <el-table-column label="操作"  fixed="right">
           <template #default="{ row }">
             <div class="action-buttons">
+              <!-- 查看按钮 - 所有状态都可以查看 -->
+              <el-button
+                type="info"
+                size="small"
+                @click="openReviewDialog(row)"
+              >
+                查看
+              </el-button>
+              
               <!-- 待审核状态 - 显示审核按钮 -->
               <el-button
                 v-if="row.status === 'pending_initial' || row.status === 'under_review'"
@@ -191,7 +200,7 @@
     <el-dialog
       v-model="reviewDialogVisible"
       title="申请审核"
-      width="1200px"
+      width="1400px"
       top="5vh"
       :close-on-click-modal="false"
     >
@@ -204,37 +213,37 @@
           </el-tag>
         </div>
 
-        <!-- 详细信息标签页 -->
-        <el-tabs v-model="activeDetailTab" class="detail-tabs">
-          <!-- 基本信息 -->
-          <el-tab-pane label="基本信息" name="basic">
+        <!-- 左右分栏布局 -->
+        <div class="content-layout">
+          <!-- 左侧：申请信息 -->
+          <div class="left-section">
+            <h4 class="section-title">申请信息</h4>
             <BasicInfoDisplay
               v-model="applicationBasicInfo"
               :readonly="true"
             />
-          </el-tab-pane>
-          
-          <!-- 资料上传 -->
-          <el-tab-pane label="资料上传" name="documents">
-            <FileUploadSection
-              v-model="applicationDocuments"
-              title="申请资料"
-              :readonly="true"
-            />
-          </el-tab-pane>
-          
-          <!-- 发票上传 -->
-          <el-tab-pane label="发票上传" name="invoices">
-            <InvoiceUploadForm
-              v-model="applicationInvoices"
-              :readonly="true"
-            />
-          </el-tab-pane>
-          
+          </div>
 
-        </el-tabs>
-
-
+          <!-- 右侧：资料上传和发票上传 -->
+          <div class="right-section">
+            <el-tabs v-model="activeUploadTab" class="upload-tabs">
+              <el-tab-pane label="资料上传" name="documents">
+                <FileUploadSection
+                  v-model="applicationDocuments"
+                  title="申请资料"
+                  :readonly="true"
+                />
+              </el-tab-pane>
+              
+              <el-tab-pane label="发票上传" name="invoices">
+                <InvoiceUploadForm
+                  v-model="applicationInvoices"
+                  :readonly="true"
+                />
+              </el-tab-pane>
+            </el-tabs>
+          </div>
+        </div>
       </div>
 
       <template #footer>
@@ -265,23 +274,15 @@
             <el-radio value="approve">初审通过</el-radio>
             <el-radio value="doubt">初审存疑</el-radio>
           </el-radio-group>
-          
-          <div v-if="reviewResult === 'doubt'" class="doubt-hint">
-            <el-text type="warning" size="small">
-              若初审存疑，需要详细记录相关问题
-            </el-text>
-          </div>
         </div>
 
-        <div class="comment-section">
-          <h4 class="comment-title">
-            <span class="required-mark">*</span>问题记录
-          </h4>
+        <div v-if="reviewResult === 'doubt'" class="comment-section">
+          <h4 class="comment-title">问题记录</h4>
           <el-input
             v-model="reviewComment"
             type="textarea"
             :rows="6"
-            placeholder="请输入审核意见和问题记录..."
+            placeholder="请输入审核意见和问题记录（可选）..."
             maxlength="500"
             show-word-limit
           />
@@ -353,6 +354,7 @@ interface ApplicationDetail {
     comment?: string
     createdAt: string
     reviewer?: {
+      id: number
       phone: string
     }
   }>
@@ -361,7 +363,7 @@ interface ApplicationDetail {
 
 const currentApplicationDetail = ref<ApplicationDetail | null>(null)
 const submitting = ref(false)
-const activeDetailTab = ref('basic')
+const activeUploadTab = ref('documents')
 const reviewComment = ref('')
 const reviewOpinionVisible = ref(false)
 const reviewResult = ref('approve')
@@ -453,8 +455,7 @@ const applicationDocuments = computed(() => {
 const applicationInvoices = computed(() => {
   if (!currentApplicationDetail.value) {
     return {
-      transportReimbursementAmount: 0,
-      accommodationReimbursementAmount: 0,
+      totalReimbursementAmount: 0,
       transportInvoiceFiles: [],
       accommodationInvoiceFiles: []
     }
@@ -490,8 +491,7 @@ const applicationInvoices = computed(() => {
     }))
   
   return {
-    transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,
-    accommodationReimbursementAmount: Number(app.accommodationReimbursementAmount) || 0,
+    totalReimbursementAmount: Number(app.totalReimbursementAmount) || 0,
     transportInvoiceFiles: transportFiles,
     accommodationInvoiceFiles: accommodationFiles
   }
@@ -575,12 +575,12 @@ const handleReset = () => {
 
 
 const handleSizeChange = (size: number) => {
-  pageSize.value = size
+  applicationStore.setPageSize(size)
   fetchApplications()
 }
 
 const handleCurrentChange = (page: number) => {
-  currentPage.value = page
+  applicationStore.setPage(page)
   fetchApplications()
 }
 
@@ -650,7 +650,7 @@ const openReviewDialog = async (application: ApplicationListItem) => {
 
     
     reviewDialogVisible.value = true
-    activeDetailTab.value = 'basic'
+    activeUploadTab.value = 'documents'
     reviewComment.value = '' // 清空审核评论
   } catch (error) {
     console.error('❌ 获取申请详情失败:', error)
@@ -673,10 +673,7 @@ const openReviewOpinionDialog = () => {
 const submitReviewOpinion = async () => {
   if (!selectedApplication.value) return
   
-  if (!reviewComment.value.trim()) {
-    ElMessage.warning('请输入问题记录')
-    return
-  }
+  // 初审通过和初审存疑都不要求必填问题记录
   
   submitting.value = true
   try {
@@ -688,10 +685,12 @@ const submitReviewOpinion = async () => {
     
     // 暂时使用旧的接口，但修改状态逻辑
     const status = reviewResult.value === 'approve' ? 'initial_approved' : 'under_review'
+    // 初审通过和初审存疑都可以选择性传递 comment
+    const comment = reviewComment.value.trim()
     await applicationStore.updateApplicationStatus(
       selectedApplication.value.id, 
       status,
-      reviewComment.value.trim()
+      comment
     )
     
     // 重新获取申请详情以更新状态
@@ -809,8 +808,7 @@ onMounted(() => {
 
 /* 审核对话框样式 */
 .review-dialog-content {
-  max-height: 70vh;
-  overflow-y: auto;
+  /* 移除主容器的滚动条 */
 }
 
 .application-header {
@@ -826,6 +824,57 @@ onMounted(() => {
   margin: 0;
   color: #303133;
   font-size: 18px;
+}
+
+/* 左右分栏布局 */
+.content-layout {
+  display: flex;
+  gap: 20px;
+  height: 60vh;
+}
+
+.left-section {
+  flex: 1;
+  min-width: 0;
+  padding-right: 20px;
+  border-right: 1px solid #ebeef5;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.right-section {
+  flex: 1;
+  min-width: 0;
+  padding-right: 20px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+}
+
+.upload-tabs {
+  :deep(.el-tabs__header) {
+    margin-bottom: 16px;
+  }
+
+  :deep(.el-tabs__nav-wrap::after) {
+    display: none;
+  }
+
+  :deep(.el-tabs__item) {
+    font-weight: 500;
+    font-size: 15px;
+  }
+
+  :deep(.el-tabs__item.is-active) {
+    color: #409eff;
+  }
 }
 
 .detail-tabs {

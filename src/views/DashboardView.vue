@@ -49,13 +49,7 @@
         <el-col :span="6">
           <div class="stat-card" v-loading="isLoading">
             <div class="stat-number">{{ stats.averageApplications }}</div>
-            <div class="stat-label">平均申请数量</div>
-          </div>
-        </el-col>
-        <el-col :span="6">
-          <div class="stat-card" v-loading="isLoading">
-            <div class="stat-number">{{ formatAmount(stats.averageAmount) }}</div>
-            <div class="stat-label">平均援助金额（元）</div>
+            <div class="stat-label">平均申请期数</div>
           </div>
         </el-col>
       </el-row>
@@ -63,7 +57,7 @@
 
     <!-- 被援助者信息统计 -->
     <div class="assistance-statistics">
-      <h2 class="section-title">被援助者信息统计</h2>
+      <h2 class="section-title">获捐者信息统计</h2>
       
       <!-- 统计选项卡 -->
       <div class="stats-tabs">
@@ -102,22 +96,6 @@
         
         <!-- 筛选控件组 -->
         <div class="filter-controls">
-          <!-- 维度筛选下拉框 -->
-          <div class="dimension-selector">
-            <el-select 
-              v-model="selectedDimensionLabel" 
-              placeholder="选择筛选维度"
-              @change="handleDimensionLabelChange"
-              style="width: 140px; margin-right: 10px;"
-            >
-              <el-option label="受捐者区域" value="受捐者区域" />
-              <el-option label="常住地址" value="常住地址" />
-              <el-option label="医保所在地" value="医保所在地" />
-              <el-option label="就诊地" value="就诊地" />
-              <el-option label="户籍所在地" value="户籍所在地" />
-            </el-select>
-          </div>
-          
           <!-- 日期选择器 -->
           <div class="date-picker">
             <el-date-picker
@@ -196,8 +174,6 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import ProvinceChart from '@/components/charts/ProvinceChart.vue'
 import PieChart from '@/components/charts/PieChart.vue'
@@ -207,46 +183,24 @@ const dashboardStore = useDashboardStore()
 // 响应式数据
 const activeTab = ref('province')
 const dateRange = ref<[string, string] | []>([])
-const selectedDimensionLabel = ref('受捐者区域')
+
+// 固定使用户籍所在地作为筛选维度
+const selectedDimension = ref('household')
 
 // 计算属性
 const stats = computed(() => dashboardStore.stats)
 const isLoading = computed(() => dashboardStore.isLoading)
-const lastUpdated = computed(() => dashboardStore.lastUpdated)
 const provinceData = computed(() => dashboardStore.provinceData)
 const provinceRanking = computed(() => dashboardStore.provinceRanking)
 const genderData = computed(() => dashboardStore.genderData)
 const ageData = computed(() => dashboardStore.ageData)
 
-// 维度标签映射
-const dimensionLabels = {
-  recipient: '受捐者区域',
-  residence: '常住地址',
-  medical: '医保所在地',
-  treatment: '就诊地',
-  household: '户籍所在地'
-}
-
-// 反向映射：从中文标签到英文键值
-const labelToDimension: Record<string, string> = {
-  '受捐者区域': 'recipient',
-  '常住地址': 'residence',
-  '医保所在地': 'medical',
-  '就诊地': 'treatment',
-  '户籍所在地': 'household'
-}
-
-// 根据中文标签获取对应的英文维度键值
-const selectedDimension = computed(() => {
-  return labelToDimension[selectedDimensionLabel.value] || 'recipient'
-})
-
 const chartTitle = computed(() => {
-  return `${selectedDimensionLabel.value}统计`
+  return ''
 })
 
 const rankingTitle = computed(() => {
-  return `${selectedDimensionLabel.value}援助排名`
+  return '户籍区域援助排名'
 })
 
 // 方法
@@ -257,39 +211,11 @@ const formatAmount = (amount: number): string => {
   return amount.toLocaleString()
 }
 
-const formatDateTime = (date: Date): string => {
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
-
-const handleRefresh = async (): Promise<void> => {
-  try {
-    await dashboardStore.fetchStats()
-    await dashboardStore.fetchProvinceData(activeTab.value, dateRange.value, selectedDimension.value)
-    await dashboardStore.fetchGenderStats()
-    await dashboardStore.fetchAgeStats()
-    ElMessage.success('数据刷新成功')
-  } catch (error) {
-    ElMessage.error('数据刷新失败')
-  }
-}
-
 const handleDateRangeChange = (dates: [string, string] | null): void => {
   if (dates) {
     dateRange.value = dates
     dashboardStore.fetchProvinceData(activeTab.value, dates, selectedDimension.value)
   }
-}
-
-const handleDimensionLabelChange = (label: string): void => {
-  selectedDimensionLabel.value = label
-  const dimension = (labelToDimension as Record<string, string>)[label] || 'recipient'
-  dashboardStore.fetchProvinceData(activeTab.value, dateRange.value, dimension)
 }
 
 // 监听activeTab变化

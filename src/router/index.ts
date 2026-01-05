@@ -124,6 +124,27 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/login-log',
+    name: 'LoginLog',
+    component: () => import('@/views/LoginLogView.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+      title: '登录日志'
+    },
+  },
+  {
+    path: '/project-management',
+    name: 'ProjectManagement',
+    component: () => import('@/views/ProjectManagement.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+      permissions: ['project:manage'],
+      title: '项目管理'
+    },
+  },
+  {
     path: '/unauthorized',
     name: 'Unauthorized',
     component: () => import('@/views/UnauthorizedView.vue'),

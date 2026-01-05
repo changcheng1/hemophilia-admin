@@ -34,9 +34,6 @@
             <el-descriptions-item label="证件号码">
               {{ application.idNumber }}
             </el-descriptions-item>
-            <el-descriptions-item label="性别">
-              {{ application.gender }}
-            </el-descriptions-item>
             <el-descriptions-item label="出生日期">
               {{ formatDate(application.dateOfBirth) }}
             </el-descriptions-item>
@@ -189,7 +186,7 @@ const getStatusText = (status: ApplicationStatus): string => {
     [ApplicationStatus.UNDER_REVIEW]: '初审存疑',
     [ApplicationStatus.REJECTED]: '审核退回',
     [ApplicationStatus.FINAL_APPROVED]: '审核通过',
-    [ApplicationStatus.DRAFT]: '草稿',
+    [ApplicationStatus.DRAFT]: '代补全资料',
     [ApplicationStatus.SUBMITTED]: '已提交',
     [ApplicationStatus.INITIAL_REVIEW]: '初审中',
     [ApplicationStatus.INITIAL_REJECTED]: '初审拒绝',

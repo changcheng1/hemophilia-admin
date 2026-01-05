@@ -69,6 +69,22 @@ export const useMenuStore = defineStore('menu', () => {
       component: 'AdminManagement',
       roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
     },
+    {
+      id: 'login-log',
+      title: '登录日志',
+      icon: 'Document',
+      path: '/login-log',
+      component: 'LoginLog',
+      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+    },
+    {
+      id: 'project-management',
+      title: '项目管理',
+      icon: 'Folder',
+      path: '/project-management',
+      component: 'ProjectManagement',
+      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+    },
   ])
 
   // Computed property to get menu items for current user role

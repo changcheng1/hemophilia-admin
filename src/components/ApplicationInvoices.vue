@@ -10,24 +10,8 @@
             </div>
           </template>
           
-          <el-row :gutter="20">
-            <el-col :span="8">
-              <el-statistic
-                title="交通费报销金额"
-                :value="application.transportReimbursementAmount || 0"
-                suffix="元"
-                :precision="2"
-              />
-            </el-col>
-            <el-col :span="8">
-              <el-statistic
-                title="住宿费报销金额"
-                :value="application.accommodationReimbursementAmount || 0"
-                suffix="元"
-                :precision="2"
-              />
-            </el-col>
-            <el-col :span="8">
+          <el-row :gutter="20" justify="center">
+            <el-col :span="12">
               <el-statistic
                 title="申请总金额"
                 :value="totalAmount"
@@ -198,8 +182,7 @@ interface InvoiceFile {
 
 interface Application {
   files?: InvoiceFile[]
-  transportReimbursementAmount?: number
-  accommodationReimbursementAmount?: number
+  totalReimbursementAmount?: number
 }
 
 interface Props {
@@ -220,9 +203,7 @@ const invoiceFiles = computed(() => {
 
 // 计算总金额
 const totalAmount = computed(() => {
-  const transport = props.application.transportReimbursementAmount || 0
-  const accommodation = props.application.accommodationReimbursementAmount || 0
-  return transport + accommodation
+  return props.application.totalReimbursementAmount || 0
 })
 
 const getInvoiceTypeText = (fileType: string): string => {

@@ -96,6 +96,44 @@ export interface ApplicationReview {
   }
 }
 
+export interface ApplicationInvoiceData {
+  applicationId: number
+  applicationNumber: string
+  recipientName: string
+  transportReimbursementAmount: number
+  accommodationReimbursementAmount: number
+  transportInvoices: any[]
+  accommodationInvoices: any[]
+}
+
+export interface DisburseRequest {
+  comment?: string
+}
+
+export interface ImportApplicationData {
+  applicationNumber: string
+  name: string
+  phone: string
+  idNumber: string
+  accountName: string
+  bankName: string
+  bankLocation: string
+  accountNumber: string
+  address: string
+  treatment: string
+  donationProject: string
+  donationPeriod: string
+  applyDate: string
+  status: string
+  totalAmount: string
+}
+
+export interface ImportApplicationsResponse {
+  success: number
+  failed: number
+  errors: string[]
+}
+
 export interface AdminApplicationAPI {
   searchApplications(params?: AdminApplicationSearchParams): Promise<AdminApplicationListResponse>
   getApplicationDetail(id: number): Promise<any>
@@ -107,6 +145,10 @@ export interface AdminApplicationAPI {
   batchUpdateStatus(data: BatchUpdateStatusRequest): Promise<{ success: number; failed: number; errors: string[] }>
   getApplicationStatistics(): Promise<ApplicationStatistics>
   getApplicationReviews(id: number): Promise<ApplicationReview[]>
+  getApplicationInvoices(id: number): Promise<ApplicationInvoiceData>
+  getBatchApplicationInvoices(applicationIds: number[]): Promise<ApplicationInvoiceData[]>
+  disburseApplication(id: number, data?: DisburseRequest): Promise<any>
+  importApplications(data: ImportApplicationData[]): Promise<ImportApplicationsResponse>
 }
 
 class AdminApplicationService extends BaseAPIService implements AdminApplicationAPI {
@@ -217,6 +259,34 @@ class AdminApplicationService extends BaseAPIService implements AdminApplication
    */
   async getApplicationReviews(id: number): Promise<ApplicationReview[]> {
     return this.get<ApplicationReview[]>(`/${id}/reviews`)
+  }
+
+  /**
+   * 获取申请的发票信息
+   */
+  async getApplicationInvoices(id: number): Promise<ApplicationInvoiceData> {
+    return this.get<ApplicationInvoiceData>(`/${id}/invoices`)
+  }
+
+  /**
+   * 批量获取申请的发票信息
+   */
+  async getBatchApplicationInvoices(applicationIds: number[]): Promise<ApplicationInvoiceData[]> {
+    return this.post<ApplicationInvoiceData[]>('/batch-invoices', { applicationIds })
+  }
+
+  /**
+   * 财务发放
+   */
+  async disburseApplication(id: number, data: DisburseRequest = {}): Promise<any> {
+    return this.post<any>(`/${id}/disburse`, data)
+  }
+
+  /**
+   * 导入申请信息
+   */
+  async importApplications(data: ImportApplicationData[]): Promise<ImportApplicationsResponse> {
+    return this.post<ImportApplicationsResponse>('/import', { data })
   }
 }
 

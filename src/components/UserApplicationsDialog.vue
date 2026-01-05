@@ -1,8 +1,8 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="用户申请记录"
-    width="1000px"
+    title="援助信息"
+    width="900px"
     @close="handleClose"
   >
  
@@ -14,48 +14,27 @@
         style="width: 100%"
         class="applications-table"
       >
-        <el-table-column prop="recipientName" label="姓名" width="100" />
-        <el-table-column prop="idNumber" label="身份证号" width="180" />
-        <el-table-column label="银行卡信息" width="200">
-          <template #default="{ row }">
-              <div v-if="row.bankAccountName || row.bankName || row.bankAccountNumber">
-              <div v-if="row.bankAccountName">{{ row.bankAccountName }}</div>
-              <div v-if="row.bankName">{{ row.bankName }}</div>
-              <div v-if="row.bankAccountNumber">{{ row.bankAccountNumber }}</div>
-            </div>
-            <span v-else>-</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="residenceAddress" label="现在住址" width="150">
-          <template #default="{ row }">
-            {{ row.residenceAddress || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="treatmentLocation" label="就诊城市" width="120">
-          <template #default="{ row }">
-            {{ row.treatmentLocation || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="就诊医院" width="120">
+        <el-table-column prop="applicationNumber" label="申请号"  />
+        <el-table-column prop="donationProject" label="援助名称" >
           <template #default="{ row }">
             {{ row.donationProject || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="审核状况" width="100">
+        <el-table-column prop="donationPeriod" label="援助期数">
+          <template #default="{ row }">
+            {{ row.donationPeriod || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="createdAt" label="申请日期" >
+          <template #default="{ row }">
+            {{ formatDate(row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)">
               {{ getStatusText(row.status) }}
             </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="援助金额" width="100">
-          <template #default="{ row }">
-            ¥{{ (row.requestAmount || 0).toFixed(2) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="createdAt" label="申请时间" width="160">
-          <template #default="{ row }">
-            {{ formatDateTime(row.createdAt) }}
           </template>
         </el-table-column>
       </el-table>
@@ -116,17 +95,24 @@ const visible = computed({
 })
 
 // Utility functions
-const formatDateTime = (dateString: string): string => {
-  return new Date(dateString).toLocaleString('zh-CN')
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
 }
 
 // 获取状态标签类型
 const getStatusType = (status: string): string => {
   const statusMap: Record<string, string> = {
+    'draft': 'info',
     'pending_initial': 'warning',
     'under_review': 'info',
     'initial_approved': 'primary',
     'final_approved': 'success',
+    'disbursed': 'success',
     'rejected': 'danger',
     'cancelled': 'info'
   }
@@ -136,10 +122,12 @@ const getStatusType = (status: string): string => {
 // 获取状态文本
 const getStatusText = (status: string): string => {
   const statusMap: Record<string, string> = {
+    'draft': '代补全资料',
     'pending_initial': '待初审',
     'under_review': '审核存疑',
     'initial_approved': '初审通过',
     'final_approved': '审核通过',
+    'disbursed': '援助发放',
     'rejected': '审核退回',
     'cancelled': '已取消'
   }

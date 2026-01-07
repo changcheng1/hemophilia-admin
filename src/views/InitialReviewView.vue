@@ -282,7 +282,7 @@
             v-model="reviewComment"
             type="textarea"
             :rows="6"
-            placeholder="请输入审核意见和问题记录（可选）..."
+            placeholder="请输入审核意见和问题记录"
             maxlength="500"
             show-word-limit
           />

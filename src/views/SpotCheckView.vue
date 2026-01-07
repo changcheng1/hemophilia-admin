@@ -346,7 +346,7 @@ const getStatusType = (status: string): string => {
 
 const getStatusText = (status: string): string => {
   const statusMap: Record<string, string> = {
-    'draft': '草稿',
+    'draft': '待补全',
     'pending_initial': '待审核',
     'initial_approved': '初审通过',
     'under_review': '初审存疑',

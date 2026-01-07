@@ -438,7 +438,7 @@ const handleExportCommand = async () => {
     }
 
     const confirmed = await ElMessageBox.confirm(
-      `确定要导出全部 ${totalCount} 条打款信息吗？`,
+      `确定要导出打款信息吗？`,
       '确认导出',
       {
         confirmButtonText: '确定',

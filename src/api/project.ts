@@ -6,6 +6,8 @@ export interface Project {
   description: string
   supportCompany: string
   responsiblePerson: string
+  allowedProvinces: string[]
+  isThreeElementEnabled: boolean
   isActive: boolean
   sortOrder: number
   createdAt: string
@@ -17,6 +19,8 @@ export interface CreateProjectDto {
   description?: string
   supportCompany?: string
   responsiblePerson?: string
+  allowedProvinces?: string[]
+  isThreeElementEnabled?: boolean
   isActive?: boolean
   sortOrder?: number
 }
@@ -26,6 +30,8 @@ export interface UpdateProjectDto {
   description?: string
   supportCompany?: string
   responsiblePerson?: string
+  allowedProvinces?: string[]
+  isThreeElementEnabled?: boolean
   isActive?: boolean
   sortOrder?: number
 }
@@ -54,6 +60,14 @@ export const projectApi = {
   // 更新项目
   update(id: number, data: UpdateProjectDto) {
     return http.patch<Project>(`/admin/projects/${id}`, data)
+  },
+
+  updateProvinces(id: number, allowedProvinces: string[]) {
+    return http.patch<Project>(`/admin/projects/${id}/provinces`, { allowedProvinces })
+  },
+
+  updateRiskControl(id: number, data: { isThreeElementEnabled?: boolean }) {
+    return http.patch<Project>(`/admin/projects/${id}/risk-control`, data)
   },
 
   // 切换启用状态

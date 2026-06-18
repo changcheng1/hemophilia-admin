@@ -34,6 +34,7 @@
               <FileUploadSection
                 :model-value="documents"
                 title="申请资料"
+                :application-id="applicationDetail.id"
                 :readonly="true"
               />
             </el-tab-pane>
@@ -41,6 +42,7 @@
             <el-tab-pane label="发票上传" name="invoices">
               <InvoiceUploadForm
                 :model-value="invoices"
+                :application-id="applicationDetail.id"
                 :readonly="true"
               />
             </el-tab-pane>
@@ -85,6 +87,22 @@ interface FileItem {
   url?: string
   size?: number | string
   [key: string]: unknown
+}
+
+interface InvoiceFileItem {
+  id?: number
+  name: string
+  url: string
+  uid: string
+  status: string
+  size: number
+  fileType: string
+  originalName: string
+  recognizedAmount: number
+  recognizedInvoiceNumber: string
+  recognizedInvoiceDate: string
+  verificationStatus: string
+  verificationMessage: string
 }
 
 interface ApplicationDetail {
@@ -193,6 +211,29 @@ const basicInfo = computed(() => {
   }
 })
 
+const mapInvoiceFiles = (
+  files: FileItem[],
+  fileType: string,
+  defaultName: string,
+): InvoiceFileItem[] =>
+  files
+    .filter((file: FileItem) => file.fileType === fileType)
+    .map((file: FileItem) => ({
+      id: file.id,
+      name: String(file.originalName || defaultName),
+      url: String(file.url || ''),
+      uid: String(file.id || Date.now()),
+      status: 'success',
+      size: Number(file.size) || 0,
+      fileType: String(file.fileType || ''),
+      originalName: String(file.originalName || ''),
+      recognizedAmount: Number((file as Record<string, unknown>).recognizedAmount) || 0,
+      recognizedInvoiceNumber: String((file as Record<string, unknown>).recognizedInvoiceNumber || ''),
+      recognizedInvoiceDate: String((file as Record<string, unknown>).recognizedInvoiceDate || ''),
+      verificationStatus: String((file as Record<string, unknown>).verificationStatus || ''),
+      verificationMessage: String((file as Record<string, unknown>).verificationMessage || ''),
+    }))
+
 // 文档文件
 const documents = computed(() => {
   if (!props.applicationDetail?.files) return []
@@ -229,35 +270,15 @@ const invoices = computed(() => {
   }
   
   const app = props.applicationDetail
-  
-  const transportFiles = (app.files || [])
-    .filter((file: FileItem) => file.fileType === 'transport_invoice')
-    .map((file: FileItem) => ({
-      id: file.id,
-      name: String(file.originalName || `交通费发票`),
-      url: String(file.url || ''),
-      uid: String(file.id || Date.now()),
-      status: 'success',
-      size: Number(file.size) || 0,
-      fileType: file.fileType,
-      originalName: file.originalName
-    }))
-  
-  const accommodationFiles = (app.files || [])
-    .filter((file: FileItem) => file.fileType === 'accommodation_invoice')
-    .map((file: FileItem) => ({
-      id: file.id,
-      name: String(file.originalName || `住宿费发票`),
-      url: String(file.url || ''),
-      uid: String(file.id || Date.now()),
-      status: 'success',
-      size: Number(file.size) || 0,
-      fileType: file.fileType,
-      originalName: file.originalName
-    }))
+  const files = (app.files || []) as FileItem[]
+  const transportFiles = mapInvoiceFiles(files, 'transport_invoice', '交通费发票')
+  const accommodationFiles = mapInvoiceFiles(files, 'accommodation_invoice', '住宿费发票')
   
   return {
+    applicationId: Number(app.id) || 0,
     totalReimbursementAmount: Number(app.totalReimbursementAmount) || 0,
+    transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,
+    accommodationReimbursementAmount: Number(app.accommodationReimbursementAmount) || 0,
     transportInvoiceFiles: transportFiles,
     accommodationInvoiceFiles: accommodationFiles
   }

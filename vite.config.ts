@@ -17,7 +17,7 @@ function copyDeploymentFiles() {
     writeBundle() {
       const filesToCopy = [
         'server.cjs',
-        'ecosystem.config.js',
+        'ecosystem.config.cjs',
         'upload.js'
       ]
       
@@ -54,7 +54,13 @@ function copyDeploymentFiles() {
           // 移除 "type": "module" 以避免 PM2 兼容性问题
           engines: originalPackageJson.engines,
           scripts: {
-            start: "node server.cjs"
+            start: "node server.cjs",
+            "pm2:start": "pm2 start ecosystem.config.cjs",
+            "pm2:stop": "pm2 stop hemophilia-admin",
+            "pm2:restart": "pm2 restart hemophilia-admin",
+            "pm2:delete": "pm2 delete hemophilia-admin",
+            "pm2:logs": "pm2 logs hemophilia-admin",
+            "pm2:status": "pm2 status"
           },
           dependencies: serverDependencies
         }

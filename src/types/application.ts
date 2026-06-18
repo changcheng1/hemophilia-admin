@@ -98,6 +98,5 @@ export enum FileType {
   ID_CARD_FRONT = 'id_card_front',
   ID_CARD_BACK = 'id_card_back',
   MEDICAL_RECORD = 'medical_record',
-  MEDICAL_INVOICE = 'medical_invoice',
   MEDICAL_REPORT = 'medical_report',
 }

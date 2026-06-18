@@ -242,7 +242,6 @@ const getFileTypeText = (fileType: string): string => {
     'id_card_front': '身份证正面',
     'id_card_back': '身份证背面',
     'medical_record': '就诊病历',
-    'medical_invoice': '医疗发票',
     'examination_report': '检查报告'
   }
   return typeMap[fileType] || fileType

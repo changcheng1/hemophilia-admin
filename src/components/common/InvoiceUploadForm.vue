@@ -4,10 +4,24 @@
     <div class="total-amount-header">
       <div class="amount-card">
         <div class="amount-content">
-          <span class="amount-label">申请总金额</span>
+          <span class="amount-label">发票总计</span>
           <span class="amount-value">¥{{ formatAmount(totalAmount) }}</span>
         </div>
+        <div class="amount-sub">
+          <span>交通票合计 ¥{{ formatAmount(transportAmount) }}</span>
+          <span>住宿票合计 ¥{{ formatAmount(accommodationAmount) }}</span>
+        </div>
       </div>
+    </div>
+
+    <div class="section-actions">
+      <el-button
+        type="primary"
+        :loading="verifying"
+        @click="handleVerifyInvoices"
+      >
+        发票核验
+      </el-button>
     </div>
 
     <!-- 交通费发票 -->
@@ -46,6 +60,25 @@
             <div class="file-info">
               <span class="file-name">{{ file.name }}</span>
               <span class="file-size" v-if="file.size">{{ formatFileSize(file.size) }}</span>
+              <span class="file-extra recognized-text" v-if="file.recognizedInvoiceNumber">
+                发票号：{{ file.recognizedInvoiceNumber }}
+              </span>
+              <span class="file-extra recognized-text" v-if="formatRecognizedDate(file.recognizedInvoiceDate)">
+                发票日期：{{ formatRecognizedDate(file.recognizedInvoiceDate) }}
+              </span>
+            <span class="file-extra" v-if="file.recognizedAmount !== undefined && file.recognizedAmount !== null">
+                发票金额¥{{ formatAmount(file.recognizedAmount) }}
+              </span>
+              <span class="file-extra error-text" v-else>
+                发票金额识别失败
+              </span>
+              <span
+                class="file-extra"
+                :class="file.verificationStatus === 'success' ? 'success-text' : 'error-text'"
+                v-if="file.verificationMessage"
+              >
+                {{ file.verificationMessage }}
+              </span>
             </div>
             
             <!-- 查看按钮 -->
@@ -108,6 +141,25 @@
             <div class="file-info">
               <span class="file-name">{{ file.name }}</span>
               <span class="file-size" v-if="file.size">{{ formatFileSize(file.size) }}</span>
+              <span class="file-extra recognized-text" v-if="file.recognizedInvoiceNumber">
+                发票号：{{ file.recognizedInvoiceNumber }}
+              </span>
+              <span class="file-extra recognized-text" v-if="formatRecognizedDate(file.recognizedInvoiceDate)">
+                发票日期：{{ formatRecognizedDate(file.recognizedInvoiceDate) }}
+              </span>
+              <span class="file-extra" v-if="file.recognizedAmount !== undefined && file.recognizedAmount !== null">
+                发票金额¥{{ formatAmount(file.recognizedAmount) }}
+              </span>
+              <span class="file-extra error-text" v-else>
+                发票金额识别失败
+              </span>
+              <span
+                class="file-extra"
+                :class="file.verificationStatus === 'success' ? 'success-text' : 'error-text'"
+                v-if="file.verificationMessage"
+              >
+                {{ file.verificationMessage }}
+              </span>
             </div>
             
             <!-- 查看按钮 -->
@@ -154,8 +206,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Document, Plus } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { adminApplicationAPI, type InvoiceVerificationResponse } from '@/api/admin-application'
 import { normalizeFileUrl } from '@/utils/fileHandler'
 
 interface FileItem {
@@ -165,35 +219,78 @@ interface FileItem {
   status?: string
   size?: number
   type?: string
+  id?: number
+  fileType?: string
+  recognizedAmount?: number
+  recognizedInvoiceNumber?: string
+  recognizedInvoiceDate?: string
+  verificationStatus?: string
+  verificationMessage?: string
 }
 
 interface InvoiceData {
+  applicationId?: number
   totalReimbursementAmount?: string | number
+  transportReimbursementAmount?: string | number
+  accommodationReimbursementAmount?: string | number
   transportInvoiceFiles?: FileItem[]
   accommodationInvoiceFiles?: FileItem[]
 }
 
 interface Props {
   modelValue: InvoiceData
+  readonly?: boolean
 }
 
 const props = defineProps<Props>()
 
 const previewVisible = ref(false)
 const currentPreviewFile = ref<FileItem | null>(null)
+const verifying = ref(false)
+const localInvoiceData = ref<InvoiceData>({
+  applicationId: undefined,
+  totalReimbursementAmount: 0,
+  transportReimbursementAmount: 0,
+  accommodationReimbursementAmount: 0,
+  transportInvoiceFiles: [],
+  accommodationInvoiceFiles: [],
+})
+
+watch(
+  () => props.modelValue,
+  (value) => {
+    localInvoiceData.value = {
+      applicationId: value?.applicationId,
+      totalReimbursementAmount: value?.totalReimbursementAmount || 0,
+      transportReimbursementAmount: value?.transportReimbursementAmount || 0,
+      accommodationReimbursementAmount: value?.accommodationReimbursementAmount || 0,
+      transportInvoiceFiles: (value?.transportInvoiceFiles || []).map((item) => ({ ...item })),
+      accommodationInvoiceFiles: (value?.accommodationInvoiceFiles || []).map((item) => ({ ...item })),
+    }
+  },
+  { immediate: true, deep: true },
+)
 
 // 表单数据
-const formData = computed(() => props.modelValue)
+const formData = computed(() => localInvoiceData.value)
 
 // 交通费发票文件
-const transportInvoiceFiles = computed(() => props.modelValue.transportInvoiceFiles || [])
+const transportInvoiceFiles = computed(() => localInvoiceData.value.transportInvoiceFiles || [])
 
 // 住宿费发票文件
-const accommodationInvoiceFiles = computed(() => props.modelValue.accommodationInvoiceFiles || [])
+const accommodationInvoiceFiles = computed(() => localInvoiceData.value.accommodationInvoiceFiles || [])
 
 // 总金额
 const totalAmount = computed(() => {
-  return parseFloat(String(props.modelValue.totalReimbursementAmount || 0)) || 0
+  return parseFloat(String(localInvoiceData.value.totalReimbursementAmount || 0)) || 0
+})
+
+const transportAmount = computed(() => {
+  return parseFloat(String(localInvoiceData.value.transportReimbursementAmount || 0)) || 0
+})
+
+const accommodationAmount = computed(() => {
+  return parseFloat(String(localInvoiceData.value.accommodationReimbursementAmount || 0)) || 0
 })
 
 // 获取处理后的文件 URL
@@ -220,6 +317,56 @@ const handlePreviewClose = () => {
   currentPreviewFile.value = null
 }
 
+const handleVerifyInvoices = async () => {
+  const applicationId = localInvoiceData.value.applicationId
+  if (!applicationId) {
+    ElMessage.warning('缺少申请ID，无法核验')
+    return
+  }
+
+  verifying.value = true
+  try {
+    const result = await adminApplicationAPI.verifyInvoices(applicationId)
+    syncVerificationResult(result)
+    ElMessage.success(result.summaryMessage || '发票核验完成')
+  } catch (error) {
+    console.error('发票核验失败:', error)
+    ElMessage.error('发票核验失败')
+  } finally {
+    verifying.value = false
+  }
+}
+
+const syncVerificationResult = (result: InvoiceVerificationResponse) => {
+  localInvoiceData.value.totalReimbursementAmount = result.totalAmount
+  localInvoiceData.value.transportReimbursementAmount = result.transportAmount
+  localInvoiceData.value.accommodationReimbursementAmount = result.accommodationAmount
+
+  const replaceFiles = (files: FileItem[] = []) =>
+    files.map((file) => {
+      const matched = result.files.find((item) => Number(item.id) === Number(file.id))
+      return matched
+        ? {
+            ...file,
+            recognizedAmount: matched.recognizedAmount,
+            recognizedInvoiceNumber: matched.recognizedInvoiceNumber,
+            recognizedInvoiceDate: matched.recognizedInvoiceDate
+              ? String(matched.recognizedInvoiceDate)
+              : '',
+            verificationStatus: matched.verificationStatus,
+            verificationMessage: matched.verificationMessage,
+          }
+        : file
+    })
+
+  localInvoiceData.value.transportInvoiceFiles = replaceFiles(
+    localInvoiceData.value.transportInvoiceFiles,
+  )
+  localInvoiceData.value.accommodationInvoiceFiles = replaceFiles(
+    localInvoiceData.value.accommodationInvoiceFiles,
+  )
+}
+
 // 图片加载错误处理
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
@@ -231,6 +378,11 @@ const handleImageError = (event: Event) => {
 const formatAmount = (amount: string | number | undefined): string => {
   const num = parseFloat(String(amount || 0)) || 0
   return num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+const formatRecognizedDate = (value?: string): string => {
+  if (!value) return ''
+  return String(value).split('T')[0] || ''
 }
 
 // 格式化文件大小
@@ -248,10 +400,24 @@ const formatFileSize = (size: number | undefined): string => {
 
 <style scoped lang="scss">
 .invoice-upload-form {
+  .section-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+  }
+
   .total-amount-header {
     margin-bottom: 24px;
 
     .amount-card {
+      .amount-sub {
+        display: flex;
+        gap: 24px;
+        margin-top: 10px;
+        font-size: 13px;
+        color: #606266;
+      }
+
       .amount-content {
         display: flex;
         align-items: baseline;
@@ -371,6 +537,12 @@ const formatFileSize = (size: number | undefined): string => {
               font-size: 12px;
               color: #999;
             }
+
+            .file-extra {
+              font-size: 12px;
+              line-height: 1.5;
+              color: #f56c6c;
+            }
           }
 
           .file-action {
@@ -431,6 +603,14 @@ const formatFileSize = (size: number | undefined): string => {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
   }
+}
+
+.success-text {
+  color: #f56c6c;
+}
+
+.error-text {
+  color: #f56c6c;
 }
 
 // 预览对话框样式

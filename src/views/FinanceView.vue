@@ -480,8 +480,8 @@ const exportAllToExcel = async () => {
       params.idNumber = searchForm.idNumber
     }
     
-    // 仅导出援助发放状态的数据
-    params.status = 'disbursed'
+    // 导出审核通过和援助发放状态的数据
+    params.reviewableStatuses = ['final_approved', 'disbursed']
     
     if (searchForm.dateRange && searchForm.dateRange.length === 2) {
       params.startDate = searchForm.dateRange[0]
@@ -496,7 +496,7 @@ const exportAllToExcel = async () => {
     const allApplications = response.data
     
     if (allApplications.length === 0) {
-      ElMessage.warning('没有可导出的援助发放数据')
+      ElMessage.warning('没有可导出的审核通过或援助发放数据')
       return
     }
     // 创建工作簿和工作表
@@ -633,16 +633,19 @@ const exportAllToExcel = async () => {
 
 // 下载图片并转换为Buffer
 const downloadImage = async (url: string): Promise<ArrayBuffer | null> => {
-  try {
-    const response = await axios.get(url, { 
+    // 替换localhost地址为实际服务器地址
+    let fixedUrl = url
+    if (url.includes('localhost:3000')) {
+      fixedUrl = url.replace('http://localhost:3000', 'http://39.107.246.96:3001')
+    } else if (url.includes('localhost:3001')) {
+      fixedUrl = url.replace('http://localhost:3001', 'http://39.107.246.96:3001')
+    }
+    
+    const response = await axios.get(fixedUrl, { 
       responseType: 'arraybuffer',
       timeout: 10000
     })
     return response.data
-  } catch (error) {
-    console.error('下载图片失败:', url, error)
-    return null
-  }
 }
 
 // 获取图片扩展名

@@ -4,7 +4,7 @@ import { useNotificationStore } from '@/stores/notification'
  * 获取 API 基础 URL
  */
 export const getApiBaseUrl = (): string => {
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+  return import.meta.env.VITE_API_BASE_URL || 'http://39.107.246.96:3001'
 }
 
 /**

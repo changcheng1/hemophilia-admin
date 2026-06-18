@@ -104,7 +104,6 @@ const fileTypeLabels: Record<FileType, string> = {
   id_card_front: '身份证正面',
   id_card_back: '身份证背面',
   medical_record: '病历资料',
-  medical_invoice: '医疗发票',
   medical_report: '医疗报告'
 }
 

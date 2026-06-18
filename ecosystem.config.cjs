@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'hemophilia-admin',
       script: 'server.cjs',
-      cwd: './',
+      cwd: __dirname,
       instances: 1,
       autorestart: true,
       watch: false,

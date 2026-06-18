@@ -197,7 +197,7 @@ const currentPreviewInvoice = ref<InvoiceFile | null>(null)
 // 计算发票文件
 const invoiceFiles = computed(() => {
   return (props.application.files || []).filter((file: InvoiceFile) => 
-    file.fileType === 'medical_invoice'
+    file.fileType === 'transport_invoice' || file.fileType === 'accommodation_invoice'
   )
 })
 
@@ -208,7 +208,6 @@ const totalAmount = computed(() => {
 
 const getInvoiceTypeText = (fileType: string): string => {
   const typeMap: Record<string, string> = {
-    'medical_invoice': '医疗发票',
     'transport_invoice': '交通发票',
     'accommodation_invoice': '住宿发票'
   }

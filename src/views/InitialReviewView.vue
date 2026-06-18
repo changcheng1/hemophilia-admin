@@ -228,17 +228,18 @@
           <div class="right-section">
             <el-tabs v-model="activeUploadTab" class="upload-tabs">
               <el-tab-pane label="资料上传" name="documents">
-                <FileUploadSection
-                  v-model="applicationDocuments"
-                  title="申请资料"
-                  :readonly="true"
-                />
+            <FileUploadSection
+              v-model="applicationDocuments"
+              title="申请资料"
+              :application-id="currentApplicationDetail.id"
+              :readonly="true"
+            />
               </el-tab-pane>
               
               <el-tab-pane label="发票上传" name="invoices">
                 <InvoiceUploadForm
                   v-model="applicationInvoices"
-                  :readonly="true"
+                  :application-id="currentApplicationDetail.id"
                 />
               </el-tab-pane>
             </el-tabs>
@@ -361,6 +362,45 @@ interface ApplicationDetail {
   [key: string]: unknown
 }
 
+interface InvoiceFileItem {
+  id?: number
+  name: string
+  url: string
+  uid: string
+  status: string
+  size: number
+  fileType: string
+  originalName: string
+  recognizedAmount: number
+  recognizedInvoiceNumber: string
+  recognizedInvoiceDate: string
+  verificationStatus: string
+  verificationMessage: string
+}
+
+const mapInvoiceFiles = (
+  files: Record<string, unknown>[],
+  fileType: string,
+  defaultName: string,
+): InvoiceFileItem[] =>
+  files
+    .filter((file: Record<string, unknown>) => file.fileType === fileType)
+    .map((file: Record<string, unknown>) => ({
+      id: Number(file.id) || undefined,
+      name: String(file.originalName || defaultName),
+      url: String(file.url || ''),
+      uid: String(file.id || Date.now()),
+      status: 'success',
+      size: Number(file.size) || 0,
+      fileType: String(file.fileType || ''),
+      originalName: String(file.originalName || ''),
+      recognizedAmount: Number(file.recognizedAmount) || 0,
+      recognizedInvoiceNumber: String(file.recognizedInvoiceNumber || ''),
+      recognizedInvoiceDate: String(file.recognizedInvoiceDate || ''),
+      verificationStatus: String(file.verificationStatus || ''),
+      verificationMessage: String(file.verificationMessage || '')
+    }))
+
 const currentApplicationDetail = ref<ApplicationDetail | null>(null)
 const submitting = ref(false)
 const activeUploadTab = ref('documents')
@@ -446,6 +486,11 @@ const applicationDocuments = computed(() => {
       mimetype: String(file.mimetype || ''),
       size: String(file.size || ''),
       createdAt: String(file.createdAt || ''),
+      recognizedName: String(file.recognizedName || ''),
+      recognizedIdNumber: String(file.recognizedIdNumber || ''),
+      recognizedVisitDate: String(file.recognizedVisitDate || ''),
+      verificationStatus: String(file.verificationStatus || ''),
+      verificationMessage: String(file.verificationMessage || ''),
       // 兼容旧格式
       name: String(file.originalName || ''),
       uid: Number(file.id) || Date.now()
@@ -455,7 +500,10 @@ const applicationDocuments = computed(() => {
 const applicationInvoices = computed(() => {
   if (!currentApplicationDetail.value) {
     return {
+      applicationId: 0,
       totalReimbursementAmount: 0,
+      transportReimbursementAmount: 0,
+      accommodationReimbursementAmount: 0,
       transportInvoiceFiles: [],
       accommodationInvoiceFiles: []
     }
@@ -463,35 +511,15 @@ const applicationInvoices = computed(() => {
   
   const app = currentApplicationDetail.value
   
-  // 根据 fileType 筛选交通费发票和住宿费发票
-  const transportFiles = (app.files || [])
-    .filter((file: Record<string, unknown>) => file.fileType === 'transport_invoice')
-    .map((file: Record<string, unknown>) => ({
-      id: file.id,
-      name: String(file.originalName || `交通费发票`),
-      url: String(file.url || ''),
-      uid: String(file.id || Date.now()),
-      status: 'success',
-      size: Number(file.size) || 0,
-      fileType: file.fileType,
-      originalName: file.originalName
-    }))
-  
-  const accommodationFiles = (app.files || [])
-    .filter((file: Record<string, unknown>) => file.fileType === 'accommodation_invoice')
-    .map((file: Record<string, unknown>) => ({
-      id: file.id,
-      name: String(file.originalName || `住宿费发票`),
-      url: String(file.url || ''),
-      uid: String(file.id || Date.now()),
-      status: 'success',
-      size: Number(file.size) || 0,
-      fileType: file.fileType,
-      originalName: file.originalName
-    }))
+  const files = (app.files || []) as Record<string, unknown>[]
+  const transportFiles = mapInvoiceFiles(files, 'transport_invoice', '交通费发票')
+  const accommodationFiles = mapInvoiceFiles(files, 'accommodation_invoice', '住宿费发票')
   
   return {
+    applicationId: Number(app.id) || 0,
     totalReimbursementAmount: Number(app.totalReimbursementAmount) || 0,
+    transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,
+    accommodationReimbursementAmount: Number(app.accommodationReimbursementAmount) || 0,
     transportInvoiceFiles: transportFiles,
     accommodationInvoiceFiles: accommodationFiles
   }

@@ -102,8 +102,53 @@ export interface ApplicationInvoiceData {
   recipientName: string
   transportReimbursementAmount: number
   accommodationReimbursementAmount: number
+  totalReimbursementAmount: number
   transportInvoices: any[]
   accommodationInvoices: any[]
+}
+
+export interface ApplicationFileVerificationItem {
+  id: number
+  applicationId: number
+  fileType: string
+  originalName: string
+  filename?: string
+  path?: string
+  url?: string
+  mimetype?: string
+  size?: number
+  createdAt?: string
+  ocrStatus?: string
+  ocrRawText?: string
+  ocrPayload?: string
+  recognizedName?: string
+  recognizedIdNumber?: string
+  recognizedVisitDate?: string
+  recognizedInvoiceNumber?: string
+  recognizedInvoiceDate?: string
+  recognizedAmount?: number
+  verificationStatus?: string
+  verificationMessage?: string
+  verificationPayload?: string
+  verifiedAt?: string
+}
+
+export interface MedicalRecordVerificationResponse {
+  recognizedCount: number
+  matchedCount: number
+  duplicatedVisitDates: string[]
+  results: ApplicationFileVerificationItem[]
+  summaryMessage: string
+}
+
+export interface InvoiceVerificationResponse {
+  totalAmount: number
+  transportAmount: number
+  accommodationAmount: number
+  verifiedCount: number
+  failedCount: number
+  files: ApplicationFileVerificationItem[]
+  summaryMessage: string
 }
 
 export interface DisburseRequest {
@@ -147,6 +192,8 @@ export interface AdminApplicationAPI {
   getApplicationReviews(id: number): Promise<ApplicationReview[]>
   getApplicationInvoices(id: number): Promise<ApplicationInvoiceData>
   getBatchApplicationInvoices(applicationIds: number[]): Promise<ApplicationInvoiceData[]>
+  verifyMedicalRecords(id: number): Promise<MedicalRecordVerificationResponse>
+  verifyInvoices(id: number): Promise<InvoiceVerificationResponse>
   disburseApplication(id: number, data?: DisburseRequest): Promise<any>
   importApplications(data: ImportApplicationData[]): Promise<ImportApplicationsResponse>
 }
@@ -273,6 +320,14 @@ class AdminApplicationService extends BaseAPIService implements AdminApplication
    */
   async getBatchApplicationInvoices(applicationIds: number[]): Promise<ApplicationInvoiceData[]> {
     return this.post<ApplicationInvoiceData[]>('/batch-invoices', { applicationIds })
+  }
+
+  async verifyMedicalRecords(id: number): Promise<MedicalRecordVerificationResponse> {
+    return this.post<MedicalRecordVerificationResponse>(`/${id}/medical-records/verify`)
+  }
+
+  async verifyInvoices(id: number): Promise<InvoiceVerificationResponse> {
+    return this.post<InvoiceVerificationResponse>(`/${id}/invoices/verify`)
   }
 
   /**

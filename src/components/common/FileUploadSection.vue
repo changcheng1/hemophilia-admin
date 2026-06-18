@@ -1,5 +1,15 @@
 <template>
   <div class="file-upload-section">
+    <div class="section-actions" v-if="canVerifyMedicalRecords && applicationId">
+      <el-button
+        type="primary"
+        :loading="verifying"
+        @click="handleVerifyMedicalRecords"
+      >
+        病例核验
+      </el-button>
+    </div>
+
     <!-- 按文件类型分组展示 -->
     <div v-for="group in fileGroups" :key="group.type" class="file-group">
       <div class="group-header">
@@ -35,6 +45,20 @@
             <div class="file-info">
               <span class="file-name">{{ getFileName(file) }}</span>
               <span class="file-size" v-if="file.size">{{ formatFileSize(getFileSize(file)) }}</span>
+              <template v-if="file.fileType === 'medical_record'">
+                <span class="file-extra recognized-text" v-if="file.recognizedName">
+                  识别姓名：{{ file.recognizedName }}
+                </span>
+                <span class="file-extra recognized-text" v-if="file.recognizedIdNumber">
+                  识别身份证号：{{ file.recognizedIdNumber }}
+                </span>
+                <span class="file-extra recognized-text" v-if="formatRecognizedDate(file.recognizedVisitDate)">
+                  识别就诊日期：{{ formatRecognizedDate(file.recognizedVisitDate) }}
+                </span>
+              </template>
+              <span class="file-extra" v-if="getVerificationText(file)" :class="getVerificationClass(file)">
+                {{ getVerificationText(file) }}
+              </span>
             </div>
             
             <!-- 查看按钮 -->
@@ -94,8 +118,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Document, Download, Plus } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { adminApplicationAPI, type MedicalRecordVerificationResponse } from '@/api/admin-application'
 import { normalizeFileUrl } from '@/utils/fileHandler'
 
 interface FileItem {
@@ -109,6 +135,11 @@ interface FileItem {
   mimetype?: string // MIME类型
   size: string | number // 文件大小
   createdAt?: string
+  recognizedName?: string
+  recognizedIdNumber?: string
+  recognizedVisitDate?: string
+  verificationStatus?: string
+  verificationMessage?: string
   // 兼容旧格式
   name?: string
   uid?: number | string
@@ -130,14 +161,28 @@ interface Props {
   description?: string
   requirements?: string[]
   maxCount?: number
+  applicationId?: number
+  canVerifyMedicalRecords?: boolean
+  readonly?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  maxCount: 10
+  maxCount: 10,
+  canVerifyMedicalRecords: true,
 })
 
 const previewVisible = ref(false)
 const currentPreviewFile = ref<FileItem | null>(null)
+const verifying = ref(false)
+const localFiles = ref<FileItem[]>([])
+
+watch(
+  () => props.modelValue,
+  (value) => {
+    localFiles.value = Array.isArray(value) ? value.map((item) => ({ ...item })) : []
+  },
+  { immediate: true, deep: true },
+)
 
 // 获取处理后的文件 URL
 const getFileUrl = (file: FileItem): string => {
@@ -150,7 +195,7 @@ const currentPreviewUrl = computed(() => {
 })
 
 // 文件列表
-const fileList = computed(() => props.modelValue || [])
+const fileList = computed(() => localFiles.value || [])
 
 // 按文件类型分组
 const fileGroups = computed((): FileGroup[] => {
@@ -170,11 +215,6 @@ const fileGroups = computed((): FileGroup[] => {
     {
       type: 'medical_record',
       title: '就诊病历',
-      files: []
-    },
-    {
-      type: 'medical_invoice',
-      title: '医疗发票及费用清单',
       files: []
     },
     {
@@ -259,6 +299,56 @@ const handlePreviewClose = () => {
   currentPreviewFile.value = null
 }
 
+const handleVerifyMedicalRecords = async () => {
+  if (!props.applicationId) {
+    ElMessage.warning('缺少申请ID，无法核验')
+    return
+  }
+
+  verifying.value = true
+  try {
+    const result = await adminApplicationAPI.verifyMedicalRecords(props.applicationId)
+    syncVerificationResult(result)
+    ElMessage.success(result.summaryMessage || '病例核验完成')
+  } catch (error) {
+    console.error('病例核验失败:', error)
+    ElMessage.error('病例核验失败')
+  } finally {
+    verifying.value = false
+  }
+}
+
+const syncVerificationResult = (result: MedicalRecordVerificationResponse) => {
+  result.results?.forEach((item) => {
+    const index = localFiles.value.findIndex((file) => Number(file.id) === Number(item.id))
+    if (index >= 0) {
+      const currentFile = localFiles.value[index]
+      if (!currentFile) return
+      localFiles.value[index] = {
+        ...currentFile,
+        id: Number(item.id) || currentFile.id,
+        fileType: String(item.fileType || currentFile.fileType || ''),
+        originalName: String(item.originalName || currentFile.originalName || ''),
+        recognizedName: String(item.recognizedName || ''),
+        recognizedIdNumber: String(item.recognizedIdNumber || ''),
+        recognizedVisitDate: item.recognizedVisitDate ? String(item.recognizedVisitDate) : '',
+        verificationStatus: String(item.verificationStatus || ''),
+        verificationMessage: String(item.verificationMessage || ''),
+      }
+    }
+  })
+}
+
+const getVerificationText = (file: FileItem): string => file.verificationMessage || ''
+const getVerificationClass = (file: FileItem): string => {
+  return file.verificationStatus === 'success' ? 'success-text' : 'error-text'
+}
+
+const formatRecognizedDate = (value?: string): string => {
+  if (!value) return ''
+  return String(value).split('T')[0] || ''
+}
+
 // 下载文件
 const downloadFile = (file: FileItem | null) => {
   if (file?.url) {
@@ -305,6 +395,12 @@ const formatFileSize = (size: number): string => {
 
 <style scoped lang="scss">
 .file-upload-section {
+  .section-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+  }
+
   .file-group {
     margin-bottom: 32px;
     
@@ -419,6 +515,15 @@ const formatFileSize = (size: number): string => {
             .file-size {
               font-size: 12px;
               color: #999;
+            }
+
+            .file-extra {
+              font-size: 12px;
+              line-height: 1.5;
+            }
+
+            .recognized-text {
+              color: #606266;
             }
           }
 
@@ -547,6 +652,14 @@ const formatFileSize = (size: number): string => {
       }
     }
   }
+}
+
+.success-text {
+  color: #f56c6c;
+}
+
+.error-text {
+  color: #f56c6c;
 }
 
 // 预览对话框样式

@@ -224,7 +224,7 @@
 
 <script setup lang="ts">
 import '@wangeditor/editor/dist/css/style.css'
-import { computed, onBeforeUnmount, onMounted, shallowRef, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
@@ -307,6 +307,23 @@ const normalizeDate = (value?: string | null) => {
   return String(value).slice(0, 10)
 }
 
+const normalizeProject = (project: Project): Project => ({
+  ...project,
+  description: sanitizeRichText(project.description || ''),
+  executionStartDate: normalizeDate(project.executionStartDate) || null,
+  executionEndDate: normalizeDate(project.executionEndDate) || null,
+  projectPeriod: project.projectPeriod || '',
+  supportCompany: project.supportCompany || '',
+  responsiblePerson: project.responsiblePerson || project.responsiblePersons?.map((item) => item.name).join('、') || '',
+  responsiblePersonIds:
+    project.responsiblePersonIds ||
+    project.responsiblePersons?.map((item) => item.id) ||
+    [],
+  responsiblePersons: project.responsiblePersons || [],
+  allowedProvinces: project.allowedProvinces || [],
+  provinceLimits: project.provinceLimits || [],
+})
+
 const isProjectInExecutionRange = (row: Project, range: string[]) => {
   if (range.length < 2 || !range[0] || !range[1]) return true
   const [searchStart, searchEnd] = range
@@ -348,7 +365,7 @@ const fetchProjects = async () => {
   loading.value = true
   try {
     const response = await projectApi.getAll()
-    projects.value = response.data
+    projects.value = response.data.map(normalizeProject)
   } catch (error) {
     console.error('获取项目列表失败:', error)
     ElMessage.error('获取项目列表失败')
@@ -412,9 +429,15 @@ const handleEditorCreated = (editor: IDomEditor) => {
     descriptionEditorRef.value.destroy()
   }
   descriptionEditorRef.value = editor
+  nextTick(() => {
+    editor.setHtml(projectForm.value.description || '')
+  })
 }
 
 const getResponsiblePersonIds = (row?: Project) => {
+  if (row?.responsiblePersonIds?.length) {
+    return row.responsiblePersonIds
+  }
   if (row?.responsiblePersons?.length) {
     return row.responsiblePersons.map((item) => item.id)
   }
@@ -428,32 +451,35 @@ const getResponsiblePersonIds = (row?: Project) => {
 }
 
 const mergeProjectDetail = (base?: Project, detail?: Project) => {
-  if (!base) return detail
-  if (!detail) return base
+  if (!base) return detail ? normalizeProject(detail) : detail
+  if (!detail) return normalizeProject(base)
 
-  return {
+  return normalizeProject({
     ...base,
     ...detail,
     executionStartDate: detail.executionStartDate ?? base.executionStartDate,
     executionEndDate: detail.executionEndDate ?? base.executionEndDate,
     projectPeriod: detail.projectPeriod ?? base.projectPeriod,
+    description: detail.description || base.description,
     responsiblePerson: detail.responsiblePerson || base.responsiblePerson,
+    responsiblePersonIds: detail.responsiblePersonIds?.length ? detail.responsiblePersonIds : base.responsiblePersonIds,
     responsiblePersons: detail.responsiblePersons?.length ? detail.responsiblePersons : base.responsiblePersons,
-  }
+  })
 }
 
 const normalizeProjectForm = (row?: Project) => {
-  const executionStartDate = normalizeDate(row?.executionStartDate)
-  const executionEndDate = normalizeDate(row?.executionEndDate)
+  const normalized = row ? normalizeProject(row) : undefined
+  const executionStartDate = normalizeDate(normalized?.executionStartDate)
+  const executionEndDate = normalizeDate(normalized?.executionEndDate)
 
   return {
-    id: row?.id || null,
-    name: row?.name || '',
-    description: sanitizeRichText(row?.description || ''),
+    id: normalized?.id || null,
+    name: normalized?.name || '',
+    description: normalized?.description || '',
     executionDateRange: executionStartDate && executionEndDate ? [executionStartDate, executionEndDate] : [],
-    projectPeriod: row?.projectPeriod || '',
-    supportCompany: row?.supportCompany || '',
-    responsiblePersonIds: getResponsiblePersonIds(row),
+    projectPeriod: normalized?.projectPeriod || '',
+    supportCompany: normalized?.supportCompany || '',
+    responsiblePersonIds: getResponsiblePersonIds(normalized),
   }
 }
 
@@ -497,10 +523,12 @@ const saveProject = async () => {
       responsiblePersonIds: projectForm.value.responsiblePersonIds,
     }
     if (projectForm.value.id) {
-      await projectApi.update(projectForm.value.id, data)
+      const response = await projectApi.update(projectForm.value.id, data)
+      projectForm.value = normalizeProjectForm(response.data)
       ElMessage.success('项目已更新')
     } else {
-      await projectApi.create(data)
+      const response = await projectApi.create(data)
+      projectForm.value = normalizeProjectForm(response.data)
       ElMessage.success('项目已新增')
     }
     projectDialogVisible.value = false

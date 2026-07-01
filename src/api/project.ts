@@ -9,6 +9,7 @@ export interface Project {
   projectPeriod?: string
   supportCompany: string
   responsiblePerson: string
+  responsiblePersonIds?: number[]
   responsiblePersons?: ProjectResponsiblePerson[]
   allowedProvinces: string[]
   provinceLimits?: ProjectProvinceLimit[]

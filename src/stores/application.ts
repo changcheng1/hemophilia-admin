@@ -236,10 +236,12 @@ export const useApplicationStore = defineStore('application', () => {
     }
   }
 
-  const fetchAdminApplicationDetail = async (id: number) => {
+  const fetchAdminApplicationDetail = async (id: number, options: { maskSensitive?: boolean } = {}) => {
     loading.value = true
     try {
-      const application = await adminApplicationAPI.getApplicationDetail(id)
+      const application = options.maskSensitive
+        ? await adminApplicationAPI.getSpotCheckApplicationDetail(id)
+        : await adminApplicationAPI.getApplicationDetail(id, options)
       currentApplication.value = application
       return application
     } catch (error) {
@@ -342,10 +344,10 @@ export const useApplicationStore = defineStore('application', () => {
     }
   }
 
-  const randomSpotCheck = async (count: number, dateRange?: string) => {
+  const randomSpotCheck = async (count: number, dateRange?: string, options: { maskSensitive?: boolean } = {}) => {
     loading.value = true
     try {
-      const result = await adminApplicationAPI.randomSpotCheck({ count, dateRange })
+      const result = await adminApplicationAPI.randomSpotCheck({ count, dateRange, ...options })
       ElMessage.success(`随机选择了 ${result.selectedApplications.length} 个申请进行抽查`)
       return result
     } catch (error) {

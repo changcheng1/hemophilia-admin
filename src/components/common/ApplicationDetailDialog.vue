@@ -254,6 +254,13 @@ const documents = computed(() => {
       mimetype: String(file.mimetype || ''),
       size: String(file.size || ''),
       createdAt: String(file.createdAt || ''),
+      recognizedName: String((file as Record<string, unknown>).recognizedName || ''),
+      recognizedIdNumber: String((file as Record<string, unknown>).recognizedIdNumber || ''),
+      recognizedVisitDate: String((file as Record<string, unknown>).recognizedVisitDate || ''),
+      ocrRawText: String((file as Record<string, unknown>).ocrRawText || ''),
+      ocrPayload: String((file as Record<string, unknown>).ocrPayload || ''),
+      verificationStatus: String((file as Record<string, unknown>).verificationStatus || ''),
+      verificationMessage: String((file as Record<string, unknown>).verificationMessage || ''),
       name: String(file.originalName || ''),
       uid: Number(file.id) || Date.now()
     }))

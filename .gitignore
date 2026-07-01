@@ -1,43 +1,38 @@
+# compiled output
+/dist
+/dist.server-latest
+/node_modules
+/.npm-cache
+/build
+
 # Logs
 logs
 *.log
 npm-debug.log*
+pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
+# OS
 .DS_Store
-dist
-dist-ssr
-coverage
-*.local
 
-# Editor directories and files
+# Tests
+/coverage
+
+# IDEs and editors
+/.idea
 .vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 !.vscode/extensions.json
-.idea
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
-*.tsbuildinfo
+# dotenv environment variable files
+.env
+.env.*
+!.env.example
 
-.eslintcache
-
-# Cypress
-/cypress/videos/
-/cypress/screenshots/
-
-# Vitest
-__screenshots__/
-
-# PM2
-.pm2/
-ecosystem.config.js.backup
-
-# Upload
-upload.log
+# uploads and backups
+/uploads
+/backups
+*.sql

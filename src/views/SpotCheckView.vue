@@ -397,6 +397,7 @@ const handleCurrentChange = (page: number) => {
 
 const fetchSpotCheckApplications = () => {
   const params: Record<string, unknown> = {}
+  params.maskSensitive = true
   
   if (searchForm.applicationNumber) {
     params.applicationNumber = searchForm.applicationNumber
@@ -438,7 +439,7 @@ const fetchSpotCheckApplications = () => {
 const handleViewApplication = async (application: ApplicationListItem) => {
   try {
     // 使用管理员API根据申请ID查询完整的申请信息
-    const detail = await applicationStore.fetchAdminApplicationDetail(application.id)
+    const detail = await applicationStore.fetchAdminApplicationDetail(application.id, { maskSensitive: true })
     
     // 转换文件数据格式以匹配前端组件期望的格式
     if (detail.files && detail.files.length > 0) {
@@ -491,7 +492,8 @@ const executeRandomSpotCheck = async () => {
     // 使用随机抽查接口，默认查询全部时间范围
     const result = await applicationStore.randomSpotCheck(
       randomSpotCheckForm.count,
-      'all'
+      'all',
+      { maskSensitive: true }
     )
     
     console.log('随机抽查结果:', result)

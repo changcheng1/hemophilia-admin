@@ -4,36 +4,69 @@ export interface Project {
   id: number
   name: string
   description: string
+  executionStartDate?: string | null
+  executionEndDate?: string | null
+  projectPeriod?: string
   supportCompany: string
   responsiblePerson: string
+  responsiblePersons?: ProjectResponsiblePerson[]
   allowedProvinces: string[]
+  provinceLimits?: ProjectProvinceLimit[]
   isThreeElementEnabled: boolean
+  isHouseholdLocationEnabled?: boolean
+  isMedicalInsuranceLocationEnabled?: boolean
+  isTreatmentLocationEnabled?: boolean
   isActive: boolean
-  sortOrder: number
   createdAt: string
   updatedAt: string
+}
+
+export interface ProjectResponsiblePerson {
+  id: number
+  name: string
+  phone: string
+}
+
+export interface ProjectProvinceLimit {
+  province: string
+  limitCount: number
+  registeredCount?: number
 }
 
 export interface CreateProjectDto {
   name: string
   description?: string
+  executionStartDate?: string | null
+  executionEndDate?: string | null
+  projectPeriod?: string
   supportCompany?: string
   responsiblePerson?: string
+  responsiblePersonIds?: number[]
   allowedProvinces?: string[]
+  provinceLimits?: ProjectProvinceLimit[]
   isThreeElementEnabled?: boolean
+  isHouseholdLocationEnabled?: boolean
+  isMedicalInsuranceLocationEnabled?: boolean
+  isTreatmentLocationEnabled?: boolean
   isActive?: boolean
-  sortOrder?: number
 }
 
 export interface UpdateProjectDto {
   name?: string
   description?: string
+  executionStartDate?: string | null
+  executionEndDate?: string | null
+  projectPeriod?: string
   supportCompany?: string
   responsiblePerson?: string
+  responsiblePersonIds?: number[]
   allowedProvinces?: string[]
+  provinceLimits?: ProjectProvinceLimit[]
   isThreeElementEnabled?: boolean
+  isHouseholdLocationEnabled?: boolean
+  isMedicalInsuranceLocationEnabled?: boolean
+  isTreatmentLocationEnabled?: boolean
   isActive?: boolean
-  sortOrder?: number
 }
 
 export const projectApi = {
@@ -62,11 +95,22 @@ export const projectApi = {
     return http.patch<Project>(`/admin/projects/${id}`, data)
   },
 
-  updateProvinces(id: number, allowedProvinces: string[]) {
-    return http.patch<Project>(`/admin/projects/${id}/provinces`, { allowedProvinces })
+  updateProvinces(id: number, provinceLimits: ProjectProvinceLimit[]) {
+    return http.patch<Project>(`/admin/projects/${id}`, {
+      provinceLimits,
+      allowedProvinces: provinceLimits.map((item) => item.province),
+    })
   },
 
-  updateRiskControl(id: number, data: { isThreeElementEnabled?: boolean }) {
+  updateRiskControl(
+    id: number,
+    data: {
+      isThreeElementEnabled?: boolean
+      isHouseholdLocationEnabled?: boolean
+      isMedicalInsuranceLocationEnabled?: boolean
+      isTreatmentLocationEnabled?: boolean
+    },
+  ) {
     return http.patch<Project>(`/admin/projects/${id}/risk-control`, data)
   },
 

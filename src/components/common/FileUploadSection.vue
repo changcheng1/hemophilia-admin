@@ -45,7 +45,7 @@
             <div class="file-info">
               <span class="file-name">{{ getFileName(file) }}</span>
               <span class="file-size" v-if="file.size">{{ formatFileSize(getFileSize(file)) }}</span>
-              <template v-if="file.fileType === 'medical_record'">
+              <template v-if="isMedicalTextFile(file)">
                 <span class="file-extra recognized-text" v-if="file.recognizedName">
                   识别姓名：{{ file.recognizedName }}
                 </span>
@@ -54,6 +54,9 @@
                 </span>
                 <span class="file-extra recognized-text" v-if="formatRecognizedDate(file.recognizedVisitDate)">
                   识别就诊日期：{{ formatRecognizedDate(file.recognizedVisitDate) }}
+                </span>
+                <span class="file-extra recognized-text ocr-text" v-if="file.ocrRawText">
+                  识别内容：{{ file.ocrRawText }}
                 </span>
               </template>
               <span class="file-extra" v-if="getVerificationText(file)" :class="getVerificationClass(file)">
@@ -138,6 +141,8 @@ interface FileItem {
   recognizedName?: string
   recognizedIdNumber?: string
   recognizedVisitDate?: string
+  ocrRawText?: string
+  ocrPayload?: string
   verificationStatus?: string
   verificationMessage?: string
   // 兼容旧格式
@@ -227,8 +232,7 @@ const fileGroups = computed((): FileGroup[] => {
 
   // 将文件分配到对应的组
   fileList.value.forEach(file => {
-    // 直接使用文件的 fileType 字段进行匹配
-    const fileType = file.fileType
+    const fileType = getDisplayFileType(file)
     
     if (fileType) {
       // 排除交通费发票和住宿费发票，这些将在 invoiceUploadForm 组件中处理
@@ -332,6 +336,8 @@ const syncVerificationResult = (result: MedicalRecordVerificationResponse) => {
         recognizedName: String(item.recognizedName || ''),
         recognizedIdNumber: String(item.recognizedIdNumber || ''),
         recognizedVisitDate: item.recognizedVisitDate ? String(item.recognizedVisitDate) : '',
+        ocrRawText: String(item.ocrRawText || ''),
+        ocrPayload: String(item.ocrPayload || ''),
         verificationStatus: String(item.verificationStatus || ''),
         verificationMessage: String(item.verificationMessage || ''),
       }
@@ -347,6 +353,32 @@ const getVerificationClass = (file: FileItem): string => {
 const formatRecognizedDate = (value?: string): string => {
   if (!value) return ''
   return String(value).split('T')[0] || ''
+}
+
+const getDisplayFileType = (file: FileItem): string => {
+  const fileType = String(file.fileType || '')
+  const fileName = String(file.originalName || file.filename || file.name || '')
+
+  if (
+    fileType === 'examination_report' ||
+    fileType === 'diagnosis_proof' ||
+    fileType === 'diagnosis_certificate' ||
+    fileType === 'medical_certificate' ||
+    /检查|报告|诊断|证明/.test(fileName)
+  ) {
+    return 'medical_report'
+  }
+
+  if (/病历|病例|就诊|出院|住院/.test(fileName)) {
+    return 'medical_record'
+  }
+
+  return fileType
+}
+
+const isMedicalTextFile = (file: FileItem): boolean => {
+  const fileType = getDisplayFileType(file)
+  return fileType === 'medical_record' || fileType === 'medical_report'
 }
 
 // 下载文件
@@ -524,6 +556,15 @@ const formatFileSize = (size: number): string => {
 
             .recognized-text {
               color: #606266;
+            }
+
+            .ocr-text {
+              display: -webkit-box;
+              max-width: 100%;
+              overflow: hidden;
+              word-break: break-all;
+              -webkit-box-orient: vertical;
+              -webkit-line-clamp: 3;
             }
           }
 

@@ -12,6 +12,7 @@ export interface AdminApplicationSearchParams {
   endDate?: string
   page?: number
   limit?: number
+  maskSensitive?: boolean
 }
 
 export interface AdminApplicationListItem {
@@ -66,6 +67,7 @@ export interface SpotCheckRequest {
 export interface RandomSpotCheckRequest {
   count: number
   dateRange?: string
+  maskSensitive?: boolean
 }
 
 export interface RandomSpotCheckResponse {
@@ -153,6 +155,7 @@ export interface InvoiceVerificationResponse {
 
 export interface DisburseRequest {
   comment?: string
+  amount?: number
 }
 
 export interface ImportApplicationData {
@@ -181,7 +184,8 @@ export interface ImportApplicationsResponse {
 
 export interface AdminApplicationAPI {
   searchApplications(params?: AdminApplicationSearchParams): Promise<AdminApplicationListResponse>
-  getApplicationDetail(id: number): Promise<any>
+  getApplicationDetail(id: number, params?: { maskSensitive?: boolean }): Promise<any>
+  getSpotCheckApplicationDetail(id: number): Promise<any>
   updateApplicationStatus(id: number, data: UpdateStatusRequest): Promise<any>
   initialReview(id: number, data: InitialReviewRequest): Promise<any>
   finalReview(id: number, data: FinalReviewRequest): Promise<any>
@@ -213,8 +217,15 @@ class AdminApplicationService extends BaseAPIService implements AdminApplication
   /**
    * 管理员获取申请详情
    */
-  async getApplicationDetail(id: number): Promise<any> {
-    return this.get<any>(`/${id}`)
+  async getApplicationDetail(id: number, params?: { maskSensitive?: boolean }): Promise<any> {
+    return this.get<any>(`/${id}`, { params })
+  }
+
+  /**
+   * 抽查管理获取脱敏申请详情
+   */
+  async getSpotCheckApplicationDetail(id: number): Promise<any> {
+    return this.get<any>(`/${id}/spot-check-detail`)
   }
 
   /**

@@ -116,10 +116,10 @@
         <el-table-column prop="recipientName" label="患者姓名"  />
         <el-table-column prop="idType" label="证件类型" />
         <el-table-column prop="idNumber" label="证件号码" />
-        <el-table-column prop="totalReimbursementAmount" label="发放金额" width="120">
+        <el-table-column prop="disbursementAmount" label="发放金额" width="120">
           <template #default="{ row }">
             <span style="color: #f56c6c; font-weight: 500;">
-              ¥{{ ((row.disbursementAmount !== null && row.disbursementAmount !== undefined) ? row.disbursementAmount : row.totalReimbursementAmount || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+              {{ formatCurrency(getDisplayDisbursementAmount(row)) }}
             </span>
           </template>
         </el-table-column>
@@ -301,6 +301,24 @@ const formatDate = (dateString: string): string => {
   })
 }
 
+const toAmountNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === '') return null
+  const amount = Number(value)
+  return Number.isFinite(amount) ? amount : null
+}
+
+const getDisplayDisbursementAmount = (application: Record<string, unknown>): number => {
+  return toAmountNumber(application.totalReimbursementAmount) ?? 0
+}
+
+const formatCurrency = (value: unknown): string => {
+  const amount = toAmountNumber(value) ?? 0
+  return `¥${amount.toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`
+}
+
 // 查看申请详情
 const handleViewApplication = async (application: ApplicationListItem) => {
   try {
@@ -330,6 +348,7 @@ const handleViewApplication = async (application: ApplicationListItem) => {
 // 处理援助发放
 const handleDisburse = async (application: ApplicationListItem) => {
   try {
+    const amount = getDisplayDisbursementAmount(application as unknown as Record<string, unknown>)
     await ElMessageBox.confirm(
       `确定要将申请 ${application.applicationNumber} 标记为援助发放吗？`,
       '确认发放',
@@ -341,7 +360,8 @@ const handleDisburse = async (application: ApplicationListItem) => {
     )
 
     await adminApplicationAPI.disburseApplication(application.id, {
-      comment: '财务发放完成'
+      comment: '财务发放完成',
+      amount,
     })
 
     ElMessage.success('援助发放成功')
@@ -533,8 +553,8 @@ const exportAllToExcel = async () => {
     for (let i = 0; i < allApplications.length; i++) {
       const app = allApplications[i] as any
       
-      const totalAmount = Number(app.totalReimbursementAmount) || 0
-      const disbursementAmount = Number(app.disbursementAmount !== null && app.disbursementAmount !== undefined ? app.disbursementAmount : app.totalReimbursementAmount) || 0
+      const totalAmount = toAmountNumber(app.totalReimbursementAmount) ?? 0
+      const disbursementAmount = getDisplayDisbursementAmount(app)
 
       // 添加数据行（包含申请号和发放金额）
       const row = worksheet.addRow({

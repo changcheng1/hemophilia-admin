@@ -51,6 +51,15 @@
               />
             </el-form-item>
           </el-col>
+          <el-col :span="6">
+            <el-form-item label="援助期数">
+              <el-input
+                v-model="searchForm.donationPeriod"
+                placeholder="请输入"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
           <el-col :span="12">
             <el-form-item label="申请日期">
               <el-date-picker
@@ -61,6 +70,7 @@
                 end-placeholder="结束日期"
                 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD"
+                :disabled-date="disableBeforeDatePickerMinDate"
                 style="width: 100%"
               />
             </el-form-item>
@@ -107,7 +117,12 @@
       >
         <el-table-column prop="applicationNumber" label="申请号" show-overflow-tooltip/>
         <el-table-column prop="donationProject" label="申请项目" />
-        <el-table-column prop="donationPeriod" label="申请期数"  />
+        <el-table-column prop="donationPeriod" label="援助期数"  />
+        <el-table-column label="上限金额" width="120">
+          <template #default="{ row }">
+            {{ formatOptionalCurrency(row.singlePeriodLimitAmount) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="phone" label="手机号" width="120">
           <template #default="{ row }">
             {{ row.user?.phone || '-' }}
@@ -116,10 +131,15 @@
         <el-table-column prop="recipientName" label="患者姓名"  />
         <el-table-column prop="idType" label="证件类型" />
         <el-table-column prop="idNumber" label="证件号码" />
+        <el-table-column prop="totalReimbursementAmount" label="申请金额" width="120">
+          <template #default="{ row }">
+            {{ formatOptionalCurrency(row.totalReimbursementAmount) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="disbursementAmount" label="发放金额" width="120">
           <template #default="{ row }">
             <span style="color: #f56c6c; font-weight: 500;">
-              {{ formatCurrency(getDisplayDisbursementAmount(row)) }}
+              {{ formatOptionalCurrency(row.disbursementAmount) }}
             </span>
           </template>
         </el-table-column>
@@ -146,12 +166,12 @@
                 查看
               </el-button>
               <el-button
-                v-if="row.status === 'final_approved'"
+                v-if="canDisburse(row)"
                 type="success"
                 size="small"
                 @click="handleDisburse(row)"
               >
-                援助发放
+                申请发放
               </el-button>
             </div>
           </template>
@@ -175,12 +195,28 @@
     <!-- Application Detail Dialog -->
     <ApplicationDetailDialog
       v-model:visible="spotCheckDialogVisible"
-      title="申请详情"
+      title="审核管理"
       :application-detail="currentApplicationDetail"
       :status-type="currentApplicationDetail ? getStatusType(currentApplicationDetail.status as string) : 'info'"
       :status-text="currentApplicationDetail ? getStatusText(currentApplicationDetail.status as string) : ''"
       :hide-documents="true"
-    />
+    >
+      <template #before-content>
+        <el-tabs
+          v-if="displayRelatedApplications.length"
+          v-model="activeRelatedApplicationId"
+          class="finance-application-tabs"
+          @tab-change="handleRelatedApplicationChange"
+        >
+          <el-tab-pane
+            v-for="item in displayRelatedApplications"
+            :key="item.id"
+            :label="item.applicationNumber"
+            :name="String(item.id)"
+          />
+        </el-tabs>
+      </template>
+    </ApplicationDetailDialog>
   </div>
 </template>
 
@@ -193,9 +229,11 @@ import { saveAs } from 'file-saver'
 import axios from 'axios'
 
 import { useApplicationStore } from '@/stores/application'
-import { adminApplicationAPI } from '@/api/admin-application'
+import { adminApplicationAPI, type RelatedApplicationItem } from '@/api/admin-application'
+import { projectApi, type Project } from '@/api/project'
 import type { ApplicationListItem } from '@/types/application'
 import ApplicationDetailDialog from '@/components/common/ApplicationDetailDialog.vue'
+import { disableBeforeDatePickerMinDate } from '@/utils/datePicker'
 
 const applicationStore = useApplicationStore()
 
@@ -209,11 +247,44 @@ const searchForm = reactive({
   phone: '',
   recipientName: '',
   idNumber: '',
+  donationPeriod: '',
   status: '', // 默认查询审核通过的申请
   dateRange: [] as string[]
 })
 
 const spotCheckDialogVisible = ref(false)
+
+type FinanceApplication = ApplicationListItem & {
+  projectId?: number | null
+  periodId?: number | null
+  donationProject?: string
+  donationPeriod?: string
+  singlePeriodLimitAmount?: number | string | null
+  totalReimbursementAmount?: number | string | null
+  disbursementAmount?: number | string | null
+  applicationNumber: string
+  idType?: string
+  idNumber?: string
+  bankAccountName?: string
+  bankName?: string
+  bankLocation?: string
+  bankAccountNumber?: string
+  residenceAddress?: string
+  treatmentLocation?: string
+  transportInvoices?: Array<{ url: string }>
+  accommodationInvoices?: Array<{ url: string }>
+  user?: {
+    phone?: string
+  }
+}
+
+type FinanceSummaryRow = FinanceApplication & {
+  applications: FinanceApplication[]
+  applicationNumbers: string[]
+  latestApplication: FinanceApplication
+  totalReimbursementAmount: number
+  disbursementAmount: number | null
+}
 
 interface ApplicationDetail {
   id: number
@@ -243,11 +314,43 @@ interface ApplicationDetail {
 }
 
 const currentApplicationDetail = ref<ApplicationDetail | null>(null)
+const allFinanceApplications = ref<FinanceApplication[]>([])
+const financeTotal = ref(0)
+const financeLoading = ref(false)
+const relatedApplications = ref<RelatedApplicationItem[]>([])
+const activeRelatedApplicationId = ref('')
+const projectLimitLoaded = ref(false)
+const projectLimitById = ref(new Map<number, number>())
+const projectLimitByName = ref(new Map<string, number>())
+
+const displayRelatedApplications = computed<RelatedApplicationItem[]>(() => {
+  if (relatedApplications.value.length) {
+    return relatedApplications.value
+  }
+  if (!currentApplicationDetail.value) {
+    return []
+  }
+  const detail = currentApplicationDetail.value
+  return [
+    {
+      id: detail.id,
+      applicationNumber: detail.applicationNumber,
+      recipientName: detail.recipientName,
+      idNumber: String(detail.idNumber || ''),
+      projectId: typeof detail.projectId === 'number' ? detail.projectId : null,
+      periodId: typeof detail.periodId === 'number' ? detail.periodId : null,
+      donationProject: String(detail.donationProject || ''),
+      donationPeriod: String(detail.donationPeriod || ''),
+      status: detail.status,
+      createdAt: String(detail.createdAt || ''),
+    },
+  ]
+})
 
 // Computed properties
-const applications = computed(() => applicationStore.applications)
-const loading = computed(() => applicationStore.loading)
-const total = computed(() => applicationStore.total)
+const applications = computed(() => summarizeApplications(allFinanceApplications.value))
+const loading = computed(() => applicationStore.loading || financeLoading.value)
+const total = computed(() => financeTotal.value)
 const currentPage = computed({
   get: () => applicationStore.currentPage,
   set: (value) => applicationStore.setPage(value)
@@ -287,7 +390,7 @@ const getStatusText = (status: string): string => {
     'under_review': '初审存疑',
     'rejected': '审核退回',
     'final_approved': '审核通过',
-    'disbursed': '援助发放'
+    'disbursed': '申请发放'
   }
   return statusMap[status] || '未知状态'
 }
@@ -307,8 +410,8 @@ const toAmountNumber = (value: unknown): number | null => {
   return Number.isFinite(amount) ? amount : null
 }
 
-const getDisplayDisbursementAmount = (application: Record<string, unknown>): number => {
-  return toAmountNumber(application.totalReimbursementAmount) ?? 0
+const getDisplayDisbursementAmount = (application: { disbursementAmount?: unknown }): number => {
+  return toAmountNumber(application.disbursementAmount) ?? 0
 }
 
 const formatCurrency = (value: unknown): string => {
@@ -319,100 +422,115 @@ const formatCurrency = (value: unknown): string => {
   })}`
 }
 
-// 查看申请详情
-const handleViewApplication = async (application: ApplicationListItem) => {
-  try {
-    // 使用管理员API根据申请ID查询完整的申请信息
-    const detail = await applicationStore.fetchAdminApplicationDetail(application.id)
-    
-    // 转换文件数据格式以匹配前端组件期望的格式
-    if (detail.files && detail.files.length > 0) {
-      detail.files = detail.files.map((file: Record<string, unknown>) => ({
-        ...file,
-        fileUrl: file.url || file.path || '',
-        fileSize: file.size || 0,
-        createdAt: file.createdAt || file.uploadedAt
-      }))
-    }
-    
-    currentApplicationDetail.value = detail as ApplicationDetail
-    
-    // 显示对话框
-    spotCheckDialogVisible.value = true
-  } catch (error) {
-    console.error('获取申请详情失败:', error)
-    ElMessage.error('获取申请详情失败')
-  }
+const formatOptionalCurrency = (value: unknown): string => {
+  const amount = toAmountNumber(value)
+  if (amount === null) return '-'
+  return formatCurrency(amount)
 }
 
-// 处理援助发放
-const handleDisburse = async (application: ApplicationListItem) => {
+const loadProjectLimitAmounts = async () => {
+  if (projectLimitLoaded.value) return
   try {
-    const amount = getDisplayDisbursementAmount(application as unknown as Record<string, unknown>)
-    await ElMessageBox.confirm(
-      `确定要将申请 ${application.applicationNumber} 标记为援助发放吗？`,
-      '确认发放',
-      {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning',
-      }
-    )
+    const response = await projectApi.getAll()
+    const projects = response.data
+    const byId = new Map<number, number>()
+    const byName = new Map<string, number>()
 
-    await adminApplicationAPI.disburseApplication(application.id, {
-      comment: '财务发放完成',
-      amount,
+    ;(projects as Project[]).forEach((project) => {
+      const limitAmount = toAmountNumber(project.singlePeriodLimitAmount)
+      if (limitAmount === null) return
+      byId.set(project.id, limitAmount)
+      const projectName = String(project.name || '').trim()
+      if (projectName) {
+        byName.set(projectName, limitAmount)
+      }
     })
 
-    ElMessage.success('援助发放成功')
-    
-    // 刷新列表
-    fetchSpotCheckApplications()
-  } catch (error: any) {
-    if (error !== 'cancel') {
-      console.error('援助发放失败:', error)
-      ElMessage.error(error.response?.data?.message || '援助发放失败')
-    }
+    projectLimitById.value = byId
+    projectLimitByName.value = byName
+    projectLimitLoaded.value = true
+  } catch (error) {
+    console.error('获取项目单期额度失败:', error)
   }
 }
 
-const handleSearch = () => {
-  applicationStore.setPage(1)
-  fetchSpotCheckApplications()
+const getProjectLimitAmount = (application: FinanceApplication): number | null => {
+  const directAmount = toAmountNumber(application.singlePeriodLimitAmount)
+  if (directAmount !== null) return directAmount
+
+  const projectId = Number(application.projectId)
+  if (Number.isFinite(projectId)) {
+    const amountById = projectLimitById.value.get(projectId)
+    if (amountById !== undefined) return amountById
+  }
+
+  const projectName = String(application.donationProject || '').trim()
+  if (projectName) {
+    const amountByName = projectLimitByName.value.get(projectName)
+    if (amountByName !== undefined) return amountByName
+  }
+
+  return null
 }
 
-const handleReset = () => {
-  searchForm.applicationNumber = ''
-  searchForm.donationProject = ''
-  searchForm.phone = ''
-  searchForm.recipientName = ''
-  searchForm.idNumber = ''
-  searchForm.status = ''
-  searchForm.dateRange = []
-  
-  // 重置随机抽查状态
-  showingRandomResults.value = false
-  
-  applicationStore.setPage(1)
-  fetchSpotCheckApplications()
+const canDisburse = (row: FinanceSummaryRow | FinanceApplication) => {
+  const applications = (row as FinanceSummaryRow).applications || [row as FinanceApplication]
+  return applications.some((item) => item.status === 'final_approved')
 }
 
-
-
-
-const handleSizeChange = (size: number) => {
-  applicationStore.setPageSize(size)
-  fetchSpotCheckApplications()
+const getSummaryKey = (application: FinanceApplication) => {
+  return [
+    application.idNumber || '',
+    application.projectId || application.donationProject || '',
+    application.periodId || application.donationPeriod || '',
+  ].join('|')
 }
 
-const handleCurrentChange = (page: number) => {
-  applicationStore.setPage(page)
-  fetchSpotCheckApplications()
+const summarizeApplications = (items: FinanceApplication[]): FinanceSummaryRow[] => {
+  const groups = new Map<string, FinanceApplication[]>()
+  items.forEach((item) => {
+    const key = getSummaryKey(item)
+    const group = groups.get(key) || []
+    group.push(item)
+    groups.set(key, group)
+  })
+
+  return Array.from(groups.values()).flatMap((group) => {
+    const sorted = [...group].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    const latest = sorted[0]
+    if (!latest) return []
+    const requestAmount = sorted.reduce(
+      (sum, item) => sum + (toAmountNumber(item.totalReimbursementAmount) ?? 0),
+      0,
+    )
+    const disbursedItems = sorted
+      .map((item) => toAmountNumber(item.disbursementAmount))
+      .filter((amount): amount is number => amount !== null)
+    const disbursementAmount = disbursedItems.length
+      ? disbursedItems.reduce((sum, amount) => sum + amount, 0)
+      : null
+    const singlePeriodLimitAmount = sorted
+      .map((item) => getProjectLimitAmount(item))
+      .find((amount): amount is number => amount !== null)
+
+    return [{
+      ...latest,
+      applications: sorted,
+      latestApplication: latest,
+      applicationNumber: latest.applicationNumber,
+      applicationNumbers: sorted.map((item) => item.applicationNumber),
+      singlePeriodLimitAmount: singlePeriodLimitAmount ?? latest.singlePeriodLimitAmount,
+      totalReimbursementAmount: requestAmount,
+      disbursementAmount,
+    }]
+  })
 }
 
-const fetchSpotCheckApplications = () => {
+const buildFinanceSearchParams = (withPagination = true) => {
   const params: Record<string, unknown> = {}
-  
+
   if (searchForm.applicationNumber) {
     params.applicationNumber = searchForm.applicationNumber
   }
@@ -428,22 +546,236 @@ const fetchSpotCheckApplications = () => {
   if (searchForm.idNumber) {
     params.idNumber = searchForm.idNumber
   }
-  
-  // 重置随机抽查状态
-  showingRandomResults.value = false
+  if (searchForm.donationPeriod) {
+    params.donationPeriod = searchForm.donationPeriod
+  }
 
-  // 查询审核通过和援助发放的申请
   params.reviewableStatuses = ['final_approved', 'disbursed']
-  
+
   if (searchForm.dateRange && searchForm.dateRange.length === 2) {
     params.startDate = searchForm.dateRange[0]
     params.endDate = searchForm.dateRange[1]
   }
-  
-  
-  // 使用管理员搜索接口
-  applicationStore.searchApplications(params).then(() => {
+
+  if (withPagination) {
+    params.page = 1
+    params.limit = 10000
+  }
+
+  return params
+}
+
+const normalizeDetailFiles = (detail: Record<string, unknown>) => {
+  if (Array.isArray(detail.files) && detail.files.length > 0) {
+    detail.files = detail.files.map((file: Record<string, unknown>) => ({
+      ...file,
+      fileUrl: file.url || file.path || '',
+      fileSize: file.size || 0,
+      createdAt: file.createdAt || file.uploadedAt
+    }))
+  }
+  return detail
+}
+
+const toRelatedApplicationItem = (application: FinanceApplication): RelatedApplicationItem => ({
+  id: application.id,
+  applicationNumber: application.applicationNumber,
+  recipientName: application.recipientName,
+  idNumber: application.idNumber || '',
+  projectId: application.projectId,
+  periodId: application.periodId,
+  donationProject: application.donationProject,
+  donationPeriod: application.donationPeriod,
+  status: application.status,
+  createdAt: application.createdAt
+})
+
+const getFallbackRelatedApplications = (
+  application: ApplicationListItem | FinanceSummaryRow,
+): RelatedApplicationItem[] => {
+  const summary = application as FinanceSummaryRow
+  const items = summary.applications || [application as FinanceApplication]
+  return items.map((item) => toRelatedApplicationItem(item))
+}
+
+const ensureCurrentApplicationInRelatedList = (
+  target: FinanceApplication,
+  relatedItems: RelatedApplicationItem[],
+) => {
+  if (relatedItems.some((item) => item.id === target.id)) {
+    return relatedItems
+  }
+  return [toRelatedApplicationItem(target), ...relatedItems]
+}
+
+const mergeRelatedApplications = (
+  target: FinanceApplication,
+  primaryItems: RelatedApplicationItem[],
+  fallbackItems: RelatedApplicationItem[],
+) => {
+  const itemById = new Map<number, RelatedApplicationItem>()
+  ;[
+    ...ensureCurrentApplicationInRelatedList(target, primaryItems),
+    ...fallbackItems,
+  ].forEach((item) => {
+    if (item?.id && !itemById.has(item.id)) {
+      itemById.set(item.id, item)
+    }
   })
+  return Array.from(itemById.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
+}
+
+const loadFinanceApplicationDetail = async (applicationId: number) => {
+  const detail = await applicationStore.fetchAdminApplicationDetail(applicationId)
+  currentApplicationDetail.value = normalizeDetailFiles(
+    detail as Record<string, unknown>,
+  ) as ApplicationDetail
+  activeRelatedApplicationId.value = String(applicationId)
+}
+
+// 查看申请详情
+const handleViewApplication = async (application: ApplicationListItem | FinanceSummaryRow) => {
+  try {
+    const target = (application as FinanceSummaryRow).latestApplication || application
+    const fallbackRelatedApplications = getFallbackRelatedApplications(application)
+
+    try {
+      const relatedItems = await adminApplicationAPI.getRelatedApplications(target.id)
+      relatedApplications.value = mergeRelatedApplications(
+        target as FinanceApplication,
+        relatedItems,
+        fallbackRelatedApplications,
+      )
+    } catch (error) {
+      console.error('获取同组申请列表失败:', error)
+      relatedApplications.value = fallbackRelatedApplications
+    }
+
+    await loadFinanceApplicationDetail(target.id)
+    
+    // 显示对话框
+    spotCheckDialogVisible.value = true
+  } catch (error) {
+    console.error('获取申请详情失败:', error)
+    ElMessage.error('获取申请详情失败')
+  }
+}
+
+const handleRelatedApplicationChange = async (name: string | number) => {
+  const applicationId = Number(name)
+  if (!applicationId || applicationId === currentApplicationDetail.value?.id) return
+
+  try {
+    await loadFinanceApplicationDetail(applicationId)
+  } catch (error) {
+    console.error('切换申请详情失败:', error)
+    ElMessage.error('切换申请详情失败')
+  }
+}
+
+// 处理申请发放
+const handleDisburse = async (application: ApplicationListItem | FinanceSummaryRow) => {
+  try {
+    const summary = application as FinanceSummaryRow
+    const targetApplications = summary.applications || [application as FinanceApplication]
+    const payableApplications = targetApplications.filter((item) => item.status === 'final_approved')
+    if (!payableApplications.length) {
+      ElMessage.warning('当前汇总记录没有待发放申请')
+      return
+    }
+    await ElMessageBox.confirm(
+      `确定要将 ${payableApplications.length} 条申请标记为申请发放吗？`,
+      '确认发放',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    for (const item of payableApplications) {
+      await adminApplicationAPI.disburseApplication(item.id, {
+        comment: '财务发放完成',
+        amount: toAmountNumber(item.totalReimbursementAmount) ?? 0,
+      })
+    }
+
+    ElMessage.success('申请发放成功')
+    
+    // 刷新列表
+    fetchSpotCheckApplications()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('申请发放失败:', error)
+      ElMessage.error(error.response?.data?.message || '申请发放失败')
+    }
+  }
+}
+
+const handleSearch = () => {
+  applicationStore.setPage(1)
+  fetchSpotCheckApplications()
+}
+
+const handleReset = () => {
+  searchForm.applicationNumber = ''
+  searchForm.donationProject = ''
+  searchForm.phone = ''
+  searchForm.recipientName = ''
+  searchForm.idNumber = ''
+  searchForm.donationPeriod = ''
+  searchForm.status = ''
+  searchForm.dateRange = []
+  
+  // 重置随机抽查状态
+  showingRandomResults.value = false
+  
+  applicationStore.setPage(1)
+  fetchSpotCheckApplications()
+}
+
+
+
+
+const handleSizeChange = (size: number) => {
+  applicationStore.setPageSize(size)
+  applicationStore.setPage(1)
+  updatePagedFinanceApplications()
+}
+
+const handleCurrentChange = (page: number) => {
+  applicationStore.setPage(page)
+  updatePagedFinanceApplications()
+}
+
+const updatePagedFinanceApplications = () => {
+  const summarized = summarizeApplications(allFinanceApplications.value)
+  financeTotal.value = summarized.length
+  const start = (currentPage.value - 1) * pageSize.value
+  applicationStore.setApplications(
+    summarized.slice(start, start + pageSize.value),
+    summarized.length,
+  )
+}
+
+const fetchSpotCheckApplications = async () => {
+  showingRandomResults.value = false
+  financeLoading.value = true
+  try {
+    await loadProjectLimitAmounts()
+    const response = await adminApplicationAPI.searchApplications(
+      buildFinanceSearchParams(true),
+    )
+    allFinanceApplications.value = response.data as FinanceApplication[]
+    updatePagedFinanceApplications()
+  } catch (error) {
+    console.error('获取财务申请列表失败:', error)
+    ElMessage.error('获取财务申请列表失败')
+  } finally {
+    financeLoading.value = false
+  }
 }
 
 // 处理导出命令
@@ -481,42 +813,14 @@ const handleExportCommand = async () => {
 // 导出所有数据到Excel（带发票图片）
 const exportAllToExcel = async () => {
   try {
-    // 构建查询参数（不包含分页）
-    const params: Record<string, unknown> = {}
-    
-    if (searchForm.applicationNumber) {
-      params.applicationNumber = searchForm.applicationNumber
-    }
-    if (searchForm.donationProject) {
-      params.donationProject = searchForm.donationProject
-    }
-    if (searchForm.phone) {
-      params.phone = searchForm.phone
-    }
-    if (searchForm.recipientName) {
-      params.recipientName = searchForm.recipientName
-    }
-    if (searchForm.idNumber) {
-      params.idNumber = searchForm.idNumber
-    }
-    
-    // 导出审核通过和援助发放状态的数据
-    params.reviewableStatuses = ['final_approved', 'disbursed']
-    
-    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
-      params.startDate = searchForm.dateRange[0]
-      params.endDate = searchForm.dateRange[1]
-    }
-    
-    // 获取所有数据（设置一个很大的 limit）
-    params.page = 1
-    params.limit = 10000
-    
-    const response = await adminApplicationAPI.searchApplications(params)
-    const allApplications = response.data
+    await loadProjectLimitAmounts()
+    const response = await adminApplicationAPI.searchApplications(
+      buildFinanceSearchParams(true),
+    )
+    const allApplications = summarizeApplications(response.data as FinanceApplication[])
     
     if (allApplications.length === 0) {
-      ElMessage.warning('没有可导出的审核通过或援助发放数据')
+      ElMessage.warning('没有可导出的审核通过或申请发放数据')
       return
     }
     // 创建工作簿和工作表
@@ -537,6 +841,7 @@ const exportAllToExcel = async () => {
       { header: '就诊地', key: 'treatment', width: 20 },
       { header: '援助项目', key: 'donationProject', width: 15 },
       { header: '项目期数', key: 'donationPeriod', width: 12 },
+      { header: '上限金额', key: 'limitAmount', width: 12 },
       { header: '申请时间', key: 'applyDate', width: 12 },
       { header: '审核状态', key: 'status', width: 12 },
       { header: '发放金额', key: 'disbursementAmount', width: 12 },
@@ -551,14 +856,17 @@ const exportAllToExcel = async () => {
 
     // 添加数据和图片
     for (let i = 0; i < allApplications.length; i++) {
-      const app = allApplications[i] as any
+      const app = allApplications[i]
+      if (!app) continue
+      const latest = app.latestApplication || app
       
       const totalAmount = toAmountNumber(app.totalReimbursementAmount) ?? 0
       const disbursementAmount = getDisplayDisbursementAmount(app)
+      const limitAmount = toAmountNumber(app.singlePeriodLimitAmount) ?? 0
 
       // 添加数据行（包含申请号和发放金额）
       const row = worksheet.addRow({
-        applicationNumber: app.applicationNumber || '-',
+        applicationNumber: latest.applicationNumber || '-',
         name: app.recipientName || '-',
         phone: app.user?.phone || '-',
         idNumber: app.idNumber || '-',
@@ -570,7 +878,8 @@ const exportAllToExcel = async () => {
         treatment: app.treatmentLocation || '-',
         donationProject: app.donationProject || '-',
         donationPeriod: app.donationPeriod || '-',
-        applyDate: app.createdAt ? new Date(app.createdAt).toLocaleDateString('zh-CN') : '-',
+        limitAmount: limitAmount.toFixed(2),
+        applyDate: latest.createdAt ? new Date(latest.createdAt).toLocaleDateString('zh-CN') : '-',
         status: getStatusText(app.status),
         disbursementAmount: disbursementAmount.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
@@ -579,16 +888,16 @@ const exportAllToExcel = async () => {
       })
 
       // 设置行高以容纳图片（根据发票数量动态调整，每张图片40px高度 + 20px间距）
-      const maxInvoices = Math.max(
-        app.transportInvoices?.length || 0,
-        app.accommodationInvoices?.length || 0
-      )
+      const transportInvoices = app.applications.flatMap((item) => item.transportInvoices || [])
+      const accommodationInvoices = app.applications.flatMap((item) => item.accommodationInvoices || [])
+      const maxInvoices = Math.max(transportInvoices.length, accommodationInvoices.length)
       row.height = maxInvoices > 0 ? maxInvoices * 60 : 60
 
       // 添加交通发票图片（固定大小80x40，间距20px，支持多张）
-      if (app.transportInvoices && app.transportInvoices.length > 0) {
-        for (let j = 0; j < app.transportInvoices.length; j++) {
-          const invoice = app.transportInvoices[j]
+      if (transportInvoices.length > 0) {
+        for (let j = 0; j < transportInvoices.length; j++) {
+          const invoice = transportInvoices[j]
+          if (!invoice) continue
           try {
             const imageBuffer = await downloadImage(invoice.url)
             if (imageBuffer) {
@@ -597,9 +906,9 @@ const exportAllToExcel = async () => {
                 extension: getImageExtension(invoice.url)
               })
               
-              // 固定大小80x40，垂直间距20px（交通发票在第16列，索引为16）
+              // 固定大小80x40，垂直间距20px（交通发票在第17列，索引为17）
               worksheet.addImage(imageId, {
-                tl: { col: 16, row: i + 1 + j * 0.8 } as any,
+                tl: { col: 17, row: i + 1 + j * 0.8 } as any,
                 ext: { width: 80, height: 40 },
                 editAs: 'oneCell'
               })
@@ -611,9 +920,10 @@ const exportAllToExcel = async () => {
       }
 
       // 添加住宿发票图片（固定大小80x40，间距20px，支持多张）
-      if (app.accommodationInvoices && app.accommodationInvoices.length > 0) {
-        for (let j = 0; j < app.accommodationInvoices.length; j++) {
-          const invoice = app.accommodationInvoices[j]
+      if (accommodationInvoices.length > 0) {
+        for (let j = 0; j < accommodationInvoices.length; j++) {
+          const invoice = accommodationInvoices[j]
+          if (!invoice) continue
           try {
             const imageBuffer = await downloadImage(invoice.url)
             if (imageBuffer) {
@@ -622,9 +932,9 @@ const exportAllToExcel = async () => {
                 extension: getImageExtension(invoice.url)
               })
               
-              // 固定大小80x40，垂直间距20px（住宿发票在第17列，索引为17）
+              // 固定大小80x40，垂直间距20px（住宿发票在第18列，索引为18）
               worksheet.addImage(imageId, {
-                tl: { col: 17, row: i + 1 + j * 0.8 } as any,
+                tl: { col: 18, row: i + 1 + j * 0.8 } as any,
                 ext: { width: 80, height: 40 },
                 editAs: 'oneCell'
               })
@@ -656,9 +966,9 @@ const downloadImage = async (url: string): Promise<ArrayBuffer | null> => {
     // 替换localhost地址为实际服务器地址
     let fixedUrl = url
     if (url.includes('localhost:3000')) {
-      fixedUrl = url.replace('http://localhost:3000', 'http://39.107.246.96:3001')
+      fixedUrl = url.replace('http://localhost:3000', 'http://8.147.63.4:3001')
     } else if (url.includes('localhost:3001')) {
-      fixedUrl = url.replace('http://localhost:3001', 'http://39.107.246.96:3001')
+      fixedUrl = url.replace('http://localhost:3001', 'http://8.147.63.4:3001')
     }
     
     const response = await axios.get(fixedUrl, { 
@@ -717,6 +1027,7 @@ const handleFileChange = async (file: { raw?: File }) => {
       treatment: string
       donationProject: string
       donationPeriod: string
+      limitAmount: string
       applyDate: string
       status: string
       disbursementAmount: string
@@ -741,10 +1052,11 @@ const handleFileChange = async (file: { raw?: File }) => {
         treatment: row.getCell(10).value?.toString().trim() || '',
         donationProject: row.getCell(11).value?.toString().trim() || '',
         donationPeriod: row.getCell(12).value?.toString().trim() || '',
-        applyDate: row.getCell(13).value?.toString().trim() || '',
-        status: row.getCell(14).value?.toString().trim() || '',
-        disbursementAmount: row.getCell(15).value?.toString().trim() || '',
-        totalAmount: row.getCell(16).value?.toString().trim() || ''
+        limitAmount: row.getCell(13).value?.toString().trim() || '',
+        applyDate: row.getCell(14).value?.toString().trim() || '',
+        status: row.getCell(15).value?.toString().trim() || '',
+        disbursementAmount: row.getCell(16).value?.toString().trim() || '',
+        totalAmount: row.getCell(17).value?.toString().trim() || ''
       }
       
       // 校验必填字段
@@ -921,6 +1233,25 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   margin-top: 20px;
+}
+
+.finance-application-tabs {
+  margin-bottom: 20px;
+
+  :deep(.el-tabs__header) {
+    margin: 0;
+  }
+
+  :deep(.el-tabs__nav-wrap::after) {
+    height: 1px;
+  }
+
+  :deep(.el-tabs__item) {
+    min-width: 140px;
+    padding: 0 24px;
+    font-weight: 600;
+    font-size: 15px;
+  }
 }
 
 :deep(.el-table) {

@@ -59,6 +59,7 @@
                 end-placeholder="结束日期"
                 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD"
+                :disabled-date="disableBeforeDatePickerMinDate"
                 style="width: 100%"
               />
             </el-form-item>
@@ -134,6 +135,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminLoginLogAPI, type LoginLogQueryParams, type AdminLoginLog } from '@/api/admin-login-log'
+import { disableBeforeDatePickerMinDate } from '@/utils/datePicker'
 
 // Reactive data
 const searchForm = reactive<{

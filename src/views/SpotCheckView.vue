@@ -78,6 +78,7 @@
                 end-placeholder="结束日期"
                 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD"
+                :disabled-date="disableBeforeDatePickerMinDate"
                 style="width: 100%"
               />
             </el-form-item>
@@ -230,6 +231,7 @@ import { ElMessage } from 'element-plus'
 import { useApplicationStore } from '@/stores/application'
 import type { ApplicationListItem } from '@/types/application'
 import ApplicationDetailDialog from '@/components/common/ApplicationDetailDialog.vue'
+import { disableBeforeDatePickerMinDate } from '@/utils/datePicker'
 
 const applicationStore = useApplicationStore()
 
@@ -316,7 +318,7 @@ const spotCheckStatuses = [
   { label: '初审存疑', value: 'under_review' },
   { label: '审核通过', value: 'final_approved' },
   { label: '审核退回', value: 'rejected' },
-  { label: '援助发放', value: 'disbursed' }
+  { label: '申请发放', value: 'disbursed' }
 ]
 
 // 添加一个标识来跟踪是否显示随机抽查结果
@@ -352,7 +354,7 @@ const getStatusText = (status: string): string => {
     'under_review': '初审存疑',
     'rejected': '审核退回',
     'final_approved': '审核通过',
-    'disbursed': '援助发放'
+    'disbursed': '申请发放'
   }
   return statusMap[status] || '未知状态'
 }

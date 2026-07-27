@@ -8,6 +8,8 @@
     @update:model-value="handleClose"
   >
     <div v-if="applicationDetail" class="application-detail-content">
+      <slot name="before-content"></slot>
+
       <!-- 申请基本信息 -->
       <div class="application-header">
         <h3>{{ applicationDetail.applicationNumber }} - {{ applicationDetail.recipientName }}</h3>
@@ -181,6 +183,10 @@ const basicInfo = computed(() => {
       bankAccountName: '',
       bankName: '',
       bankAccountNumber: '',
+      threeElementVerified: false,
+      threeElementVerifiedAt: '',
+      threeElementVerificationStatus: '',
+      threeElementVerificationMessage: '',
       caseDescription: ''
     }
   }
@@ -207,6 +213,10 @@ const basicInfo = computed(() => {
     bankAccountName: String(app.bankAccountName || ''),
     bankName: String(app.bankName || ''),
     bankAccountNumber: String(app.bankAccountNumber || ''),
+    threeElementVerified: Boolean(app.threeElementVerified),
+    threeElementVerifiedAt: String(app.threeElementVerifiedAt || ''),
+    threeElementVerificationStatus: String(app.threeElementVerificationStatus || ''),
+    threeElementVerificationMessage: String(app.threeElementVerificationMessage || ''),
     caseDescription: String(app.caseDescription || '')
   }
 })
@@ -260,9 +270,7 @@ const documents = computed(() => {
       ocrRawText: String((file as Record<string, unknown>).ocrRawText || ''),
       ocrPayload: String((file as Record<string, unknown>).ocrPayload || ''),
       verificationStatus: String((file as Record<string, unknown>).verificationStatus || ''),
-      verificationMessage: String((file as Record<string, unknown>).verificationMessage || ''),
-      name: String(file.originalName || ''),
-      uid: Number(file.id) || Date.now()
+      verificationMessage: String((file as Record<string, unknown>).verificationMessage || '')
     }))
 })
 

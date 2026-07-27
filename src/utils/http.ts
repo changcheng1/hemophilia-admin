@@ -14,7 +14,7 @@ declare module 'axios' {
 
 // Create axios instance
 const http: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://39.107.246.96:3001',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://8.147.63.4:3001',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

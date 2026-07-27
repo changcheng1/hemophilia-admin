@@ -99,4 +99,11 @@ export enum FileType {
   ID_CARD_BACK = 'id_card_back',
   MEDICAL_RECORD = 'medical_record',
   MEDICAL_REPORT = 'medical_report',
+  MEDICAL_INVOICE = 'medical_invoice',
+  TRANSPORT_INVOICE = 'transport_invoice',
+  ACCOMMODATION_INVOICE = 'accommodation_invoice',
+  BANK_CARD_FRONT = 'bank_card_front',
+  BANK_CARD_BACK = 'bank_card_back',
+  GUARDIAN_RELATIONSHIP_PROOF = 'guardian_relationship_proof',
+  SIGNATURE = 'signature',
 }

@@ -7,6 +7,9 @@ export interface Project {
   executionStartDate?: string | null
   executionEndDate?: string | null
   projectPeriod?: string
+  singlePeriodLimitAmount?: number | null
+  periodCount?: number
+  periods?: ProjectPeriod[]
   supportCompany: string
   responsiblePerson: string
   responsiblePersonIds?: number[]
@@ -34,12 +37,23 @@ export interface ProjectProvinceLimit {
   registeredCount?: number
 }
 
+export interface ProjectPeriod {
+  id?: number
+  projectId?: number
+  periodName: string
+  startDate?: string | null
+  endDate?: string | null
+  sortOrder?: number
+  isActive?: boolean
+}
+
 export interface CreateProjectDto {
   name: string
   description?: string
   executionStartDate?: string | null
   executionEndDate?: string | null
   projectPeriod?: string
+  singlePeriodLimitAmount?: number | null
   supportCompany?: string
   responsiblePerson?: string
   responsiblePersonIds?: number[]
@@ -58,6 +72,7 @@ export interface UpdateProjectDto {
   executionStartDate?: string | null
   executionEndDate?: string | null
   projectPeriod?: string
+  singlePeriodLimitAmount?: number | null
   supportCompany?: string
   responsiblePerson?: string
   responsiblePersonIds?: number[]
@@ -101,6 +116,14 @@ export const projectApi = {
       provinceLimits,
       allowedProvinces: provinceLimits.map((item) => item.province),
     })
+  },
+
+  getPeriods(id: number) {
+    return http.get<ProjectPeriod[]>(`/admin/projects/${id}/periods`)
+  },
+
+  updatePeriods(id: number, periods: ProjectPeriod[]) {
+    return http.patch<ProjectPeriod[]>(`/admin/projects/${id}/periods`, { periods })
   },
 
   updateRiskControl(

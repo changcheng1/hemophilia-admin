@@ -52,6 +52,7 @@
                 end-placeholder="结束日期"
                 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD"
+                :disabled-date="disableBeforeDatePickerMinDate"
                 style="width: 100%"
               />
             </el-form-item>
@@ -88,15 +89,27 @@
         :scrollbar-always-on="true"
         table-layout="fixed"
       >
-        <el-table-column prop="id" label="用户ID"  />
-        <el-table-column prop="phone" label="手机号" />
-        <el-table-column prop="recipientName" label="患者姓名" />
-        <el-table-column prop="idType" label="证件类型" />
-        <el-table-column prop="idNumber" label="证件号码" />
-        <el-table-column prop="householdLocation" label="户籍所在地"  />
-        <el-table-column prop="medicalInsuranceLocation" label="医保所在地" />
-        <el-table-column prop="treatmentLocation" label="就诊地"/>
-        <el-table-column prop="createdAt" label="注册时间" >
+        <el-table-column prop="id" label="用户ID" width="90" />
+        <el-table-column prop="phone" label="手机号" width="130" />
+        <el-table-column prop="recipientName" label="患者姓名" width="120" show-overflow-tooltip>
+          <template #default="{ row }">{{ formatText(row.recipientName) }}</template>
+        </el-table-column>
+        <el-table-column prop="idType" label="证件类型" width="100">
+          <template #default="{ row }">{{ formatText(row.idType) }}</template>
+        </el-table-column>
+        <el-table-column prop="idNumber" label="证件号码" min-width="190" show-overflow-tooltip>
+          <template #default="{ row }">{{ formatText(row.idNumber) }}</template>
+        </el-table-column>
+        <el-table-column prop="householdLocation" label="户籍所在地" min-width="190" show-overflow-tooltip>
+          <template #default="{ row }">{{ formatText(row.householdLocation) }}</template>
+        </el-table-column>
+        <el-table-column prop="medicalInsuranceLocation" label="医保所在地" min-width="190" show-overflow-tooltip>
+          <template #default="{ row }">{{ formatText(row.medicalInsuranceLocation) }}</template>
+        </el-table-column>
+        <el-table-column prop="treatmentLocation" label="就诊地" min-width="190" show-overflow-tooltip>
+          <template #default="{ row }">{{ formatText(row.treatmentLocation) }}</template>
+        </el-table-column>
+        <el-table-column prop="createdAt" label="注册时间" width="160">
           <template #default="{ row }">
             {{ formatDateTime(row.createdAt) }}
           </template>
@@ -142,6 +155,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { userApi, type User } from '@/api/user'
 import UserApplicationsDialog from '@/components/UserApplicationsDialog.vue'
+import { disableBeforeDatePickerMinDate } from '@/utils/datePicker'
 // Data state
 const users = ref<User[]>([])
 const loading = ref(false)
@@ -165,6 +179,11 @@ const selectedUser = ref<User | null>(null)
 // Utility functions
 const formatDateTime = (dateString: string): string => {
   return new Date(dateString).toLocaleString('zh-CN')
+}
+
+const formatText = (value?: string | number | null): string => {
+  const text = String(value ?? '').trim()
+  return text || '-'
 }
 
 // API functions

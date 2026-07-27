@@ -19,14 +19,12 @@
         </span>
       </div>
       
-      <div class="group-description" v-if="group.description">
-        <p>{{ group.description }}</p>
-      </div>
+      <div class="group-description" v-if="group.description">{{ group.description }}</div>
       
       <div class="group-content">
         <!-- 有文件时展示文件列表 -->
         <div v-if="group.files.length > 0" class="file-list">
-          <div v-for="file in group.files" :key="file.uid" class="file-item" @click="handlePreview(file)">
+          <div v-for="file in group.files" :key="file.id" class="file-item" @click="handlePreview(file)">
             <!-- 文件图片预览 -->
             <div class="file-preview">
               <img 
@@ -41,30 +39,32 @@
               </div>
             </div>
             
-            <!-- 文件名称 -->
             <div class="file-info">
-              <span class="file-name">{{ getFileName(file) }}</span>
-              <span class="file-size" v-if="file.size">{{ formatFileSize(getFileSize(file)) }}</span>
-              <template v-if="isMedicalTextFile(file)">
-                <span class="file-extra recognized-text" v-if="file.recognizedName">
-                  识别姓名：{{ file.recognizedName }}
-                </span>
-                <span class="file-extra recognized-text" v-if="file.recognizedIdNumber">
-                  识别身份证号：{{ file.recognizedIdNumber }}
-                </span>
-                <span class="file-extra recognized-text" v-if="formatRecognizedDate(file.recognizedVisitDate)">
-                  识别就诊日期：{{ formatRecognizedDate(file.recognizedVisitDate) }}
-                </span>
-                <span class="file-extra recognized-text ocr-text" v-if="file.ocrRawText">
-                  识别内容：{{ file.ocrRawText }}
-                </span>
-              </template>
-              <span class="file-extra" v-if="getVerificationText(file)" :class="getVerificationClass(file)">
-                {{ getVerificationText(file) }}
-              </span>
+              <div class="file-name" :title="getFileName(file)">{{ getFileName(file) }}</div>
+              <div class="file-meta">
+                <span v-if="file.size">{{ formatFileSize(getFileSize(file)) }}</span>
+                <span>{{ getFileType(getFileName(file)) }}</span>
+              </div>
+              <div v-if="verificationTags(file).length" class="result-tags">
+                <el-tag
+                  v-for="tag in verificationTags(file)"
+                  :key="tag.label"
+                  :type="tag.type"
+                  size="small"
+                  effect="light"
+                >
+                  {{ tag.label }}：{{ tag.value }}
+                </el-tag>
+              </div>
+              <div
+                v-if="file.ocrRawText && isMedicalTextFile(file)"
+                class="ocr-snippet"
+                :title="file.ocrRawText"
+              >
+                {{ file.ocrRawText }}
+              </div>
             </div>
             
-            <!-- 查看按钮 -->
             <div class="file-action">
               <el-button 
                 type="primary" 
@@ -145,11 +145,6 @@ interface FileItem {
   ocrPayload?: string
   verificationStatus?: string
   verificationMessage?: string
-  // 兼容旧格式
-  name?: string
-  uid?: number | string
-  status?: string
-  type?: string
 }
 
 interface FileGroup {
@@ -207,24 +202,32 @@ const fileGroups = computed((): FileGroup[] => {
   const groups: FileGroup[] = [
     {
       type: 'id_card_front',
-      title: '患者身份证件（正面）',
-      placeholder: '人像面',
+      title: '身份证人像面',
+      placeholder: '暂无人像面',
       files: []
     },
     {
       type: 'id_card_back', 
-      title: '患者身份证件（背面）',
-      placeholder: '国徽面',
+      title: '身份证国徽面',
+      placeholder: '暂无国徽面',
       files: []
     },
     {
       type: 'medical_record',
       title: '就诊病历',
+      description: '门(急)诊病历、出院小结等就诊过程材料',
       files: []
     },
     {
       type: 'medical_report',
       title: '检查报告和诊断证明',
+      description: '检查报告、疾病诊断书、病理报告等证明材料',
+      files: []
+    },
+    {
+      type: 'medical_invoice',
+      title: '医疗发票及费用清单',
+      description: '医疗收费票据、费用清单等材料',
       files: []
     },
 
@@ -346,8 +349,29 @@ const syncVerificationResult = (result: MedicalRecordVerificationResponse) => {
 }
 
 const getVerificationText = (file: FileItem): string => file.verificationMessage || ''
-const getVerificationClass = (file: FileItem): string => {
-  return file.verificationStatus === 'success' ? 'success-text' : 'error-text'
+
+const verificationTags = (
+  file: FileItem,
+): Array<{ label: string; value: string; type: 'success' | 'warning' | 'danger' | 'info' }> => {
+  const tags: Array<{ label: string; value: string; type: 'success' | 'warning' | 'danger' | 'info' }> = []
+  if (file.recognizedName) {
+    tags.push({ label: '姓名', value: file.recognizedName, type: 'info' })
+  }
+  if (file.recognizedIdNumber) {
+    tags.push({ label: '身份证号', value: file.recognizedIdNumber, type: 'info' })
+  }
+  const visitDate = formatRecognizedDate(file.recognizedVisitDate)
+  if (visitDate) {
+    tags.push({ label: '就诊日期', value: visitDate, type: 'info' })
+  }
+  if (getVerificationText(file)) {
+    tags.push({
+      label: '核验',
+      value: getVerificationText(file),
+      type: file.verificationStatus === 'success' ? 'success' : 'danger',
+    })
+  }
+  return tags
 }
 
 const formatRecognizedDate = (value?: string): string => {
@@ -356,29 +380,28 @@ const formatRecognizedDate = (value?: string): string => {
 }
 
 const getDisplayFileType = (file: FileItem): string => {
-  const fileType = String(file.fileType || '')
-  const fileName = String(file.originalName || file.filename || file.name || '')
-
   if (
-    fileType === 'examination_report' ||
-    fileType === 'diagnosis_proof' ||
-    fileType === 'diagnosis_certificate' ||
-    fileType === 'medical_certificate' ||
-    /检查|报告|诊断|证明/.test(fileName)
+    file.fileType === 'examination_report' ||
+    file.fileType === 'diagnosis_proof' ||
+    file.fileType === 'diagnosis_certificate' ||
+    file.fileType === 'medical_certificate'
   ) {
     return 'medical_report'
   }
-
-  if (/病历|病例|就诊|出院|住院/.test(fileName)) {
-    return 'medical_record'
+  if (file.fileType === 'medical_invoice') {
+    return 'medical_invoice'
   }
 
-  return fileType
+  return file.fileType
 }
 
 const isMedicalTextFile = (file: FileItem): boolean => {
   const fileType = getDisplayFileType(file)
-  return fileType === 'medical_record' || fileType === 'medical_report'
+  return (
+    fileType === 'medical_record' ||
+    fileType === 'medical_report' ||
+    fileType === 'medical_invoice'
+  )
 }
 
 // 下载文件
@@ -555,7 +578,8 @@ const formatFileSize = (size: number): string => {
             }
 
             .recognized-text {
-              color: #606266;
+              color: #f56c6c;
+              font-weight: 500;
             }
 
             .ocr-text {
@@ -710,9 +734,155 @@ const formatFileSize = (size: number): string => {
   }
 }
 
+// 压缩核验卡片展示
+.file-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .file-group {
+    margin-bottom: 0;
+  }
+
+  .group-description {
+    margin-bottom: 10px;
+    padding: 0;
+    border-left: 0;
+    background: transparent;
+    color: #909399;
+    font-size: 12px;
+  }
+
+  .file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+  }
+
+  .file-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      border-color: #c6e2ff;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  .file-card .file-preview {
+    width: 100%;
+    height: auto;
+    margin-right: 0;
+    aspect-ratio: 4 / 3;
+  }
+
+  .file-card .file-info {
+    gap: 6px;
+  }
+
+  .file-meta,
+  .result-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .file-meta {
+    color: #909399;
+    font-size: 12px;
+  }
+
+  .ocr-snippet {
+    display: -webkit-box;
+    overflow: hidden;
+    color: #606266;
+    font-size: 12px;
+    line-height: 1.45;
+    word-break: break-all;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+
+  .file-card .file-action {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .empty-placeholder {
+    min-height: 120px;
+    padding: 24px 16px;
+    border-width: 1px;
+    border-radius: 8px;
+
+    .plus-icon {
+      font-size: 24px;
+      color: #c0c4cc;
+    }
+  }
+
+  .file-group:last-child .group-content {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .file-list {
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f5f5f5;
+    background: #fff;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &:hover {
+      background: #f8f9fa;
+    }
+  }
+
+  .file-item .file-preview {
+    width: 40px;
+    height: 40px;
+    margin-right: 0;
+    aspect-ratio: auto;
+    flex-shrink: 0;
+  }
+
+  .file-item .file-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .file-item .file-action {
+    flex-shrink: 0;
+  }
+}
+
 // 响应式设计
 @media (max-width: 768px) {
   .file-upload-section {
+    .file-grid {
+      grid-template-columns: 1fr;
+    }
+
     .file-group {
       .group-header {
         .group-title {

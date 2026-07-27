@@ -12,7 +12,7 @@
           
           <div class="document-section">
             <div class="document-item">
-              <div class="document-label">身份证正面</div>
+              <div class="document-label">身份证人像面</div>
               <div class="document-content">
                 <div v-if="getDocumentByType('id_card_front')" class="file-item">
                   <el-image
@@ -31,7 +31,7 @@
             </div>
 
             <div class="document-item">
-              <div class="document-label">身份证背面</div>
+              <div class="document-label">身份证国徽面</div>
               <div class="document-content">
                 <div v-if="getDocumentByType('id_card_back')" class="file-item">
                   <el-image
@@ -239,10 +239,18 @@ const getDocumentByType = (fileType: string): DocumentFile | undefined => {
 
 const getFileTypeText = (fileType: string): string => {
   const typeMap: Record<string, string> = {
-    'id_card_front': '身份证正面',
-    'id_card_back': '身份证背面',
+    'id_card_front': '身份证人像面',
+    'id_card_back': '身份证国徽面',
     'medical_record': '就诊病历',
-    'examination_report': '检查报告'
+    'examination_report': '检查报告',
+    'medical_report': '医疗报告',
+    'medical_invoice': '医疗发票及费用清单',
+    'transport_invoice': '交通发票',
+    'accommodation_invoice': '住宿发票',
+    'bank_card_front': '银行卡正面',
+    'bank_card_back': '银行卡背面',
+    'guardian_relationship_proof': '监护关系证明',
+    'signature': '申请人签名'
   }
   return typeMap[fileType] || fileType
 }

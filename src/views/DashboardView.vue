@@ -106,6 +106,7 @@
               end-placeholder="结束日期"
               format="YYYY-MM-DD"
               value-format="YYYY-MM-DD"
+              :disabled-date="disableBeforeDatePickerMinDate"
               @change="handleDateRangeChange"
             />
           </div>
@@ -177,6 +178,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import ProvinceChart from '@/components/charts/ProvinceChart.vue'
 import PieChart from '@/components/charts/PieChart.vue'
+import { disableBeforeDatePickerMinDate } from '@/utils/datePicker'
 
 const dashboardStore = useDashboardStore()
 

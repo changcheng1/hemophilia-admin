@@ -16,7 +16,7 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         PORT: 3003,
-        API_BASE_URL: 'http://39.107.246.96:3003'
+        API_BASE_URL: 'http://8.147.63.4:3001'
       },
       env_staging: {
         NODE_ENV: 'staging',

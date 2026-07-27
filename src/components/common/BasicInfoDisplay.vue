@@ -89,6 +89,10 @@
           <span class="info-label">银行账号</span>
           <span class="info-value">{{ formData.bankAccountNumber || '-' }}</span>
         </div>
+        <div class="info-item verification-tip">
+          <span class="info-label">三要素验证</span>
+          <span class="info-value verification-value">{{ threeElementVerificationText }}</span>
+        </div>
       </div>
     </div>
 
@@ -120,7 +124,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ArrowDown } from '@element-plus/icons-vue'
 
 interface FormData {
   // 患者信息
@@ -144,6 +147,10 @@ interface FormData {
   bankAccountName?: string
   bankName?: string
   bankAccountNumber?: string
+  threeElementVerified?: boolean | string
+  threeElementVerifiedAt?: string
+  threeElementVerificationStatus?: string
+  threeElementVerificationMessage?: string
   
   // 申请信息
   applicationNumber?: string
@@ -163,6 +170,31 @@ interface Props {
 const props = defineProps<Props>()
 
 const formData = computed(() => props.modelValue)
+
+const isThreeElementVerified = computed(() => {
+  return formData.value.threeElementVerified === true ||
+    formData.value.threeElementVerified === 'true' ||
+    formData.value.threeElementVerificationStatus === 'success'
+})
+
+const threeElementVerificationText = computed(() => {
+  const status = formData.value.threeElementVerificationStatus
+  const message = formData.value.threeElementVerificationMessage
+
+  if (isThreeElementVerified.value) {
+    return message ? `*三要素验证通过：${message}` : '*三要素验证通过'
+  }
+
+  if (status === 'failed') {
+    return message ? `*三要素验证不通过：${message}` : '*三要素验证不通过'
+  }
+
+  if (status) {
+    return message ? `*三要素验证结果：${message}` : `*三要素验证状态：${status}`
+  }
+
+  return '*暂未完成银行卡三要素验证'
+})
 
 // 检查是否有监护人信息
 const hasGuardianInfo = computed(() => {
@@ -231,6 +263,15 @@ const formatDate = (dateStr?: string): string => {
           &:empty::after {
             content: '-';
             color: #ccc;
+          }
+        }
+
+        &.verification-tip {
+          .verification-value {
+            color: #f56c6c;
+            font-weight: 500;
+            white-space: normal;
+            word-break: break-word;
           }
         }
 

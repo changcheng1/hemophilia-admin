@@ -15,7 +15,7 @@ const fontColor = '\x1B[36m%s\x1B[0m';
 // 上传地址
 const remotePath = '/var/www/hemophilia-admin/';
 const serverConfig = {
-  host: '39.107.246.96', // 服务器 IP
+  host: '8.147.63.4', // 服务器 IP
   port: '22',
   username: 'root',
   password: 'Gouzi135838.',

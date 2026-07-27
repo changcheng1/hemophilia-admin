@@ -101,10 +101,17 @@ const previewUrl = ref('')
 
 // File type labels
 const fileTypeLabels: Record<FileType, string> = {
-  id_card_front: '身份证正面',
-  id_card_back: '身份证背面',
+  id_card_front: '身份证人像面',
+  id_card_back: '身份证国徽面',
   medical_record: '病历资料',
-  medical_report: '医疗报告'
+  medical_report: '医疗报告',
+  medical_invoice: '医疗发票及费用清单',
+  transport_invoice: '交通发票',
+  accommodation_invoice: '住宿发票',
+  bank_card_front: '银行卡正面',
+  bank_card_back: '银行卡背面',
+  guardian_relationship_proof: '监护关系证明',
+  signature: '申请人签名'
 }
 
 const getFileTypeLabel = (fileType: FileType): string => {

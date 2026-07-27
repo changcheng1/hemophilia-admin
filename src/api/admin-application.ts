@@ -6,6 +6,7 @@ export interface AdminApplicationSearchParams {
   phone?: string
   recipientName?: string
   idNumber?: string
+  donationPeriod?: string
   status?: string
   reviewableStatuses?: string[]
   startDate?: string
@@ -18,8 +19,13 @@ export interface AdminApplicationSearchParams {
 export interface AdminApplicationListItem {
   id: number
   applicationNumber: string
+  projectId?: number | null
+  periodId?: number | null
   donationProject?: string
   donationPeriod?: string
+  singlePeriodLimitAmount?: number | null
+  totalReimbursementAmount?: number | string | null
+  disbursementAmount?: number | string | null
   recipientName: string
   idType: string
   idNumber: string
@@ -29,6 +35,19 @@ export interface AdminApplicationListItem {
   user?: {
     phone: string
   }
+}
+
+export interface RelatedApplicationItem {
+  id: number
+  applicationNumber: string
+  recipientName: string
+  idNumber: string
+  projectId?: number | null
+  periodId?: number | null
+  donationProject?: string
+  donationPeriod?: string
+  status: string
+  createdAt: string
 }
 
 export interface AdminApplicationListResponse {
@@ -185,6 +204,7 @@ export interface ImportApplicationsResponse {
 export interface AdminApplicationAPI {
   searchApplications(params?: AdminApplicationSearchParams): Promise<AdminApplicationListResponse>
   getApplicationDetail(id: number, params?: { maskSensitive?: boolean }): Promise<any>
+  getRelatedApplications(id: number): Promise<RelatedApplicationItem[]>
   getSpotCheckApplicationDetail(id: number): Promise<any>
   updateApplicationStatus(id: number, data: UpdateStatusRequest): Promise<any>
   initialReview(id: number, data: InitialReviewRequest): Promise<any>
@@ -219,6 +239,10 @@ class AdminApplicationService extends BaseAPIService implements AdminApplication
    */
   async getApplicationDetail(id: number, params?: { maskSensitive?: boolean }): Promise<any> {
     return this.get<any>(`/${id}`, { params })
+  }
+
+  async getRelatedApplications(id: number): Promise<RelatedApplicationItem[]> {
+    return this.get<RelatedApplicationItem[]>(`/${id}/related`)
   }
 
   /**

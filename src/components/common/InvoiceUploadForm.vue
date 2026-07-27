@@ -24,25 +24,22 @@
       </el-button>
     </div>
 
-    <!-- 交通费发票 -->
-    <div class="file-group">
+    <div v-for="group in invoiceGroups" :key="group.type" class="file-group">
       <div class="group-header">
-        <h3 class="group-title">交通费发票</h3>
-        <span class="group-count" v-if="transportInvoiceFiles.length > 0">
-          ({{ transportInvoiceFiles.length }})
+        <h3 class="group-title">{{ group.title }}</h3>
+        <span class="group-count" v-if="group.files.length > 0">
+          ({{ group.files.length }})
         </span>
       </div>
       
       <div class="group-content">
-        <!-- 有文件时展示文件列表 -->
-        <div v-if="transportInvoiceFiles.length > 0" class="file-list">
+        <div v-if="group.files.length > 0" class="file-list">
           <div 
-            v-for="file in transportInvoiceFiles" 
+            v-for="file in group.files" 
             :key="file.uid" 
             class="file-item" 
             @click="handlePreview(file)"
           >
-            <!-- 文件图片预览 -->
             <div class="file-preview">
               <img 
                 v-if="file.url" 
@@ -56,113 +53,25 @@
               </div>
             </div>
             
-            <!-- 文件名称 -->
             <div class="file-info">
-              <span class="file-name">{{ file.name }}</span>
-              <span class="file-size" v-if="file.size">{{ formatFileSize(file.size) }}</span>
-              <span class="file-extra recognized-text" v-if="file.recognizedInvoiceNumber">
-                发票号：{{ file.recognizedInvoiceNumber }}
-              </span>
-              <span class="file-extra recognized-text" v-if="formatRecognizedDate(file.recognizedInvoiceDate)">
-                发票日期：{{ formatRecognizedDate(file.recognizedInvoiceDate) }}
-              </span>
-            <span class="file-extra" v-if="file.recognizedAmount !== undefined && file.recognizedAmount !== null">
-                发票金额¥{{ formatAmount(file.recognizedAmount) }}
-              </span>
-              <span class="file-extra error-text" v-else>
-                发票金额识别失败
-              </span>
-              <span
-                class="file-extra"
-                :class="file.verificationStatus === 'success' ? 'success-text' : 'error-text'"
-                v-if="file.verificationMessage"
-              >
-                {{ file.verificationMessage }}
-              </span>
-            </div>
-            
-            <!-- 查看按钮 -->
-            <div class="file-action">
-              <el-button 
-                type="primary" 
-                link 
-                size="small"
-                @click.stop="handlePreview(file)"
-              >
-                查看
-              </el-button>
-            </div>
-          </div>
-        </div>
-        
-        <!-- 无文件时的占位符 -->
-        <div v-else class="empty-placeholder">
-          <div class="placeholder-box">
-            <el-icon class="plus-icon"><Plus /></el-icon>
-          </div>
-          <div class="placeholder-text">暂无发票文件</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 住宿费发票 -->
-    <div class="file-group">
-      <div class="group-header">
-        <h3 class="group-title">住宿费发票</h3>
-        <span class="group-count" v-if="accommodationInvoiceFiles.length > 0">
-          ({{ accommodationInvoiceFiles.length }})
-        </span>
-      </div>
-      
-      <div class="group-content">
-        <!-- 有文件时展示文件列表 -->
-        <div v-if="accommodationInvoiceFiles.length > 0" class="file-list">
-          <div 
-            v-for="file in accommodationInvoiceFiles" 
-            :key="file.uid" 
-            class="file-item" 
-            @click="handlePreview(file)"
-          >
-            <!-- 文件图片预览 -->
-            <div class="file-preview">
-              <img 
-                v-if="file.url" 
-                :src="getFileUrl(file)" 
-                :alt="file.name"
-                class="file-image"
-                @error="handleImageError"
-              />
-              <div v-else class="file-placeholder">
-                <el-icon class="placeholder-icon"><Document /></el-icon>
+              <div class="file-name" :title="file.name">{{ file.name }}</div>
+              <div class="file-meta">
+                <span v-if="file.size">{{ formatFileSize(file.size) }}</span>
+                <span>{{ group.title }}</span>
+              </div>
+              <div class="result-tags">
+                <el-tag
+                  v-for="tag in invoiceTags(file)"
+                  :key="tag.label"
+                  :type="tag.type"
+                  size="small"
+                  effect="light"
+                >
+                  {{ tag.label }}：{{ tag.value }}
+                </el-tag>
               </div>
             </div>
             
-            <!-- 文件名称 -->
-            <div class="file-info">
-              <span class="file-name">{{ file.name }}</span>
-              <span class="file-size" v-if="file.size">{{ formatFileSize(file.size) }}</span>
-              <span class="file-extra recognized-text" v-if="file.recognizedInvoiceNumber">
-                发票号：{{ file.recognizedInvoiceNumber }}
-              </span>
-              <span class="file-extra recognized-text" v-if="formatRecognizedDate(file.recognizedInvoiceDate)">
-                发票日期：{{ formatRecognizedDate(file.recognizedInvoiceDate) }}
-              </span>
-              <span class="file-extra" v-if="file.recognizedAmount !== undefined && file.recognizedAmount !== null">
-                发票金额¥{{ formatAmount(file.recognizedAmount) }}
-              </span>
-              <span class="file-extra error-text" v-else>
-                发票金额识别失败
-              </span>
-              <span
-                class="file-extra"
-                :class="file.verificationStatus === 'success' ? 'success-text' : 'error-text'"
-                v-if="file.verificationMessage"
-              >
-                {{ file.verificationMessage }}
-              </span>
-            </div>
-            
-            <!-- 查看按钮 -->
             <div class="file-action">
               <el-button 
                 type="primary" 
@@ -176,12 +85,11 @@
           </div>
         </div>
         
-        <!-- 无文件时的占位符 -->
         <div v-else class="empty-placeholder">
           <div class="placeholder-box">
             <el-icon class="plus-icon"><Plus /></el-icon>
           </div>
-          <div class="placeholder-text">暂无发票文件</div>
+          <div class="placeholder-text">暂无{{ group.title }}</div>
         </div>
       </div>
     </div>
@@ -237,6 +145,12 @@ interface InvoiceData {
   accommodationInvoiceFiles?: FileItem[]
 }
 
+interface InvoiceGroup {
+  type: string
+  title: string
+  files: FileItem[]
+}
+
 interface Props {
   modelValue: InvoiceData
   readonly?: boolean
@@ -279,6 +193,19 @@ const transportInvoiceFiles = computed(() => localInvoiceData.value.transportInv
 
 // 住宿费发票文件
 const accommodationInvoiceFiles = computed(() => localInvoiceData.value.accommodationInvoiceFiles || [])
+
+const invoiceGroups = computed((): InvoiceGroup[] => [
+  {
+    type: 'transport_invoice',
+    title: '交通费发票',
+    files: transportInvoiceFiles.value,
+  },
+  {
+    type: 'accommodation_invoice',
+    title: '住宿费发票',
+    files: accommodationInvoiceFiles.value,
+  },
+])
 
 // 总金额
 const totalAmount = computed(() => {
@@ -383,6 +310,32 @@ const formatAmount = (amount: string | number | undefined): string => {
 const formatRecognizedDate = (value?: string): string => {
   if (!value) return ''
   return String(value).split('T')[0] || ''
+}
+
+const invoiceTags = (
+  file: FileItem,
+): Array<{ label: string; value: string; type: 'success' | 'warning' | 'danger' | 'info' }> => {
+  const tags: Array<{ label: string; value: string; type: 'success' | 'warning' | 'danger' | 'info' }> = []
+  if (file.recognizedInvoiceNumber) {
+    tags.push({ label: '发票号', value: file.recognizedInvoiceNumber, type: 'info' })
+  }
+  const invoiceDate = formatRecognizedDate(file.recognizedInvoiceDate)
+  if (invoiceDate) {
+    tags.push({ label: '日期', value: invoiceDate, type: 'info' })
+  }
+  if (file.recognizedAmount !== undefined && file.recognizedAmount !== null) {
+    tags.push({ label: '金额', value: `¥${formatAmount(file.recognizedAmount)}`, type: 'success' })
+  } else {
+    tags.push({ label: '金额', value: '识别失败', type: 'danger' })
+  }
+  if (file.verificationMessage) {
+    tags.push({
+      label: '核验',
+      value: file.verificationMessage,
+      type: file.verificationStatus === 'success' ? 'success' : 'danger',
+    })
+  }
+  return tags
 }
 
 // 格式化文件大小
@@ -620,9 +573,167 @@ const formatFileSize = (size: number | undefined): string => {
   }
 }
 
+// 压缩发票核验卡片展示
+.invoice-upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .section-actions {
+    margin-bottom: 0;
+  }
+
+  .total-amount-header {
+    margin-bottom: 0;
+    padding: 12px 14px;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    background: #fafcff;
+
+    .amount-card .amount-content .amount-value {
+      color: #e6a23c;
+      letter-spacing: 0;
+    }
+  }
+
+  .file-group {
+    margin-bottom: 0;
+  }
+
+  .invoice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+  }
+
+  .invoice-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+
+    &:hover {
+      transform: translateY(-1px);
+      border-color: #c6e2ff;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  .invoice-card .file-preview {
+    width: 100%;
+    height: auto;
+    margin-right: 0;
+    aspect-ratio: 4 / 3;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #f5f7fa;
+  }
+
+  .invoice-card .file-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .invoice-card .file-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .invoice-card .file-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #303133;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-meta,
+  .result-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .file-meta {
+    color: #909399;
+    font-size: 12px;
+  }
+
+  .invoice-card .file-action {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .empty-placeholder {
+    min-height: 120px;
+    padding: 24px 16px;
+    border-width: 1px;
+    border-radius: 8px;
+  }
+
+  .file-list {
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #f5f5f5;
+    background: #fff;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    &:hover {
+      background: #f8f9fa;
+    }
+  }
+
+  .file-item .file-preview {
+    width: 40px;
+    height: 40px;
+    margin-right: 0;
+    aspect-ratio: auto;
+    flex-shrink: 0;
+  }
+
+  .file-item .file-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .file-item .file-action {
+    flex-shrink: 0;
+  }
+}
+
 // 响应式设计
 @media (max-width: 768px) {
   .invoice-upload-form {
+    .amount-sub {
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .invoice-grid {
+      grid-template-columns: 1fr;
+    }
+
     .total-amount-header {
       margin-bottom: 20px;
 

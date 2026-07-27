@@ -64,7 +64,7 @@ npm start
 |--------|----------|----------|------|
 | NODE_ENV | development | production | 运行环境 |
 | PORT | 3003 | 3003 | 服务端口 |
-| API_BASE_URL | http://127.0.0.1:3003 | http://39.107.246.96:3003 | API 地址 |
+| API_BASE_URL | http://127.0.0.1:3001 | http://8.147.63.4:3001 | API 地址 |
 
 ### PM2 配置
 
@@ -90,8 +90,8 @@ hemophilia-admin/
 ## 🌐 访问地址
 
 - **开发环境**: http://localhost:8080
-- **生产环境**: http://39.107.246.96:8080
-- **健康检查**: http://39.107.246.96:8080/health
+- **生产环境**: http://8.147.63.4:3003
+- **健康检查**: http://8.147.63.4:3003/health
 
 ## 🔍 故障排除
 
@@ -119,7 +119,7 @@ hemophilia-admin/
 3. **上传失败**
    ```bash
    # 检查服务器连接
-   ssh root@39.107.246.96
+   ssh root@8.147.63.4
    
    # 检查目标目录权限
    ls -la /var/www/hemophilia-admin/
@@ -145,7 +145,7 @@ npm run build:prod
 npm run pm2:restart
 
 # 3. 验证部署
-curl http://39.107.246.96:8080/health
+curl http://8.147.63.4:3003/health
 ```
 
 ## 📊 监控和日志

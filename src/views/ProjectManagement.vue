@@ -25,6 +25,7 @@
             start-placeholder="开始日期"
             end-placeholder="结束日期"
             range-separator="至"
+            :disabled-date="disableBeforeDatePickerMinDate"
           />
         </el-form-item>
         <el-form-item label="负责人">
@@ -56,7 +57,16 @@
             {{ formatExecutionTime(row) }}
           </template>
         </el-table-column>
-        <el-table-column prop="projectPeriod" label="项目期数" min-width="120" />
+        <el-table-column label="项目期数" min-width="120">
+          <template #default="{ row }">
+            {{ formatPeriodCount(row) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="单期额度" min-width="120">
+          <template #default="{ row }">
+            {{ formatAmount(row.singlePeriodLimitAmount) }}
+          </template>
+        </el-table-column>
         <el-table-column label="负责人" min-width="180">
           <template #default="{ row }">
             {{ formatResponsiblePersons(row) }}
@@ -69,13 +79,14 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="360" fixed="right">
+        <el-table-column label="操作" width="430" fixed="right">
           <template #default="{ row }">
             <el-space wrap>
               <el-button link :type="row.isActive ? 'warning' : 'success'" @click="handleToggleActive(row)">
                 {{ row.isActive ? '禁用' : '展示' }}
               </el-button>
               <el-button link type="primary" @click="openProjectDialog(row)">编辑</el-button>
+              <el-button link type="primary" @click="openPeriodDialog(row)">期数管理</el-button>
               <el-button link type="primary" @click="openProvinceDialog(row)">省份管理</el-button>
               <el-button link type="primary" @click="openRiskDialog(row)">风控管理</el-button>
             </el-space>
@@ -99,18 +110,33 @@
           <el-input v-model="projectForm.supportCompany" placeholder="请输入援助企业" />
         </el-form-item>
         <el-form-item label="执行时间">
-          <el-date-picker
-            v-model="projectForm.executionDateRange"
-            type="daterange"
-            value-format="YYYY-MM-DD"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            range-separator="至"
-            style="width: 100%"
-          />
+          <div class="date-range-fields">
+            <el-date-picker
+              v-model="projectForm.executionStartDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="开始日期"
+              :disabled-date="disableBeforeDatePickerMinDate"
+            />
+            <span class="date-range-separator">至</span>
+            <el-date-picker
+              v-model="projectForm.executionEndDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="结束日期"
+              :disabled-date="disableBeforeDatePickerMinDate"
+            />
+          </div>
         </el-form-item>
-        <el-form-item label="项目期数">
-          <el-input v-model="projectForm.projectPeriod" placeholder="请输入项目期数，如：一期" />
+        <el-form-item label="单期额度">
+          <el-input-number
+            v-model="projectForm.singlePeriodLimitAmount"
+            :min="0"
+            :precision="2"
+            :controls="false"
+            placeholder="请输入单期额度"
+            style="width: 240px"
+          />
         </el-form-item>
         <el-form-item label="负责人" prop="responsiblePersonIds">
           <el-select
@@ -152,6 +178,63 @@
       <template #footer>
         <el-button @click="projectDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="saving" @click="saveProject">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="periodDialogVisible" :title="`${currentProjectName || '项目'} - 期数管理`" width="820px">
+      <div class="dialog-actions">
+        <el-button type="primary" @click="openPeriodEdit()">新增期数</el-button>
+      </div>
+      <el-table :data="periodForm.periods" border>
+        <el-table-column label="期数" min-width="180">
+          <template #default="{ row }">
+            {{ row.periodName }}
+          </template>
+        </el-table-column>
+        <el-table-column label="时间周期" min-width="260">
+          <template #default="{ row }">
+            {{ formatPeriodRange(row) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="150">
+          <template #default="{ row, $index }">
+            <el-button link type="primary" @click="openPeriodEdit(row, $index)">编辑</el-button>
+            <el-button link type="danger" @click="removePeriod($index)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="periodDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="savePeriods">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="periodEditVisible" :title="periodEditIndex === null ? '新增期数' : '编辑期数'" width="560px">
+      <el-form label-width="100px">
+        <el-form-item label="期数名称" required>
+          <el-input v-model="periodEditForm.periodName" maxlength="50" placeholder="请输入期数名称" />
+        </el-form-item>
+        <el-form-item label="时间周期" required>
+          <div class="date-range-fields">
+            <el-date-picker
+              v-model="periodEditForm.startDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="开始日期"
+            />
+            <span class="date-range-separator">至</span>
+            <el-date-picker
+              v-model="periodEditForm.endDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="结束日期"
+            />
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="periodEditVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmPeriodEdit">保存</el-button>
       </template>
     </el-dialog>
 
@@ -229,15 +312,19 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
-import { projectApi, type Project, type ProjectProvinceLimit } from '@/api/project'
+import { projectApi, type Project, type ProjectPeriod, type ProjectProvinceLimit } from '@/api/project'
 import { adminApi, type AdminUser } from '@/api/user'
+import { disableBeforeDatePickerMinDate } from '@/utils/datePicker'
 
 const loading = ref(false)
 const saving = ref(false)
 const projects = ref<Project[]>([])
 const adminOptions = ref<AdminUser[]>([])
 const currentProjectId = ref<number | null>(null)
+const currentProjectName = ref('')
 const projectDialogVisible = ref(false)
+const periodDialogVisible = ref(false)
+const periodEditVisible = ref(false)
 const provinceDialogVisible = ref(false)
 const provinceEditVisible = ref(false)
 const riskDialogVisible = ref(false)
@@ -251,8 +338,9 @@ const projectForm = ref({
   id: null as number | null,
   name: '',
   description: '',
-  executionDateRange: [] as string[],
-  projectPeriod: '',
+  executionStartDate: '',
+  executionEndDate: '',
+  singlePeriodLimitAmount: null as number | null,
   supportCompany: '',
   responsiblePersonIds: [] as number[],
 })
@@ -265,6 +353,17 @@ const activeSearchForm = ref({
   name: '',
   executionDateRange: [] as string[],
   responsiblePersonId: null as number | null,
+})
+
+const periodForm = ref<{ periods: ProjectPeriod[] }>({
+  periods: [],
+})
+const periodEditIndex = ref<number | null>(null)
+const periodEditForm = ref<ProjectPeriod>({
+  periodName: '',
+  startDate: '',
+  endDate: '',
+  isActive: true,
 })
 
 const provinceForm = ref<{ provinceLimits: ProjectProvinceLimit[] }>({
@@ -313,6 +412,12 @@ const normalizeProject = (project: Project): Project => ({
   executionStartDate: normalizeDate(project.executionStartDate) || null,
   executionEndDate: normalizeDate(project.executionEndDate) || null,
   projectPeriod: project.projectPeriod || '',
+  singlePeriodLimitAmount:
+    project.singlePeriodLimitAmount === null || project.singlePeriodLimitAmount === undefined
+      ? null
+      : Number(project.singlePeriodLimitAmount),
+  periodCount: project.periodCount || project.periods?.length || 0,
+  periods: project.periods || [],
   supportCompany: project.supportCompany || '',
   responsiblePerson: project.responsiblePerson || project.responsiblePersons?.map((item) => item.name).join('、') || '',
   responsiblePersonIds:
@@ -398,6 +503,22 @@ const formatExecutionTime = (row: Project) => {
   return `${normalizeDate(row.executionStartDate) || '-'} 至 ${normalizeDate(row.executionEndDate) || '-'}`
 }
 
+const formatAmount = (value?: number | null) => {
+  if (value === null || value === undefined) return '-'
+  const amount = Number(value)
+  if (Number.isNaN(amount)) return '-'
+  return `${amount.toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} 元`
+}
+
+const formatPeriodCount = (row: Project) => {
+  const count = row.periodCount ?? row.periods?.length ?? 0
+  return count ? `${count}` : '-'
+}
+
+const formatPeriodRange = (row: ProjectPeriod) => {
+  return `${normalizeDate(row.startDate) || '-'} 至 ${normalizeDate(row.endDate) || '-'}`
+}
+
 const sanitizeRichText = (html: string) => {
   if (!html) return ''
   const parser = new DOMParser()
@@ -460,6 +581,9 @@ const mergeProjectDetail = (base?: Project, detail?: Project) => {
     executionStartDate: detail.executionStartDate ?? base.executionStartDate,
     executionEndDate: detail.executionEndDate ?? base.executionEndDate,
     projectPeriod: detail.projectPeriod ?? base.projectPeriod,
+    singlePeriodLimitAmount: detail.singlePeriodLimitAmount ?? base.singlePeriodLimitAmount,
+    periodCount: detail.periodCount ?? base.periodCount,
+    periods: detail.periods?.length ? detail.periods : base.periods,
     description: detail.description || base.description,
     responsiblePerson: detail.responsiblePerson || base.responsiblePerson,
     responsiblePersonIds: detail.responsiblePersonIds?.length ? detail.responsiblePersonIds : base.responsiblePersonIds,
@@ -476,8 +600,12 @@ const normalizeProjectForm = (row?: Project) => {
     id: normalized?.id || null,
     name: normalized?.name || '',
     description: normalized?.description || '',
-    executionDateRange: executionStartDate && executionEndDate ? [executionStartDate, executionEndDate] : [],
-    projectPeriod: normalized?.projectPeriod || '',
+    executionStartDate,
+    executionEndDate,
+    singlePeriodLimitAmount:
+      normalized?.singlePeriodLimitAmount === null || normalized?.singlePeriodLimitAmount === undefined
+        ? null
+        : Number(normalized.singlePeriodLimitAmount),
     supportCompany: normalized?.supportCompany || '',
     responsiblePersonIds: getResponsiblePersonIds(normalized),
   }
@@ -516,9 +644,9 @@ const saveProject = async () => {
     const data = {
       name: projectForm.value.name,
       description: sanitizeRichText(projectForm.value.description),
-      executionStartDate: projectForm.value.executionDateRange[0] || null,
-      executionEndDate: projectForm.value.executionDateRange[1] || null,
-      projectPeriod: projectForm.value.projectPeriod,
+      executionStartDate: projectForm.value.executionStartDate || null,
+      executionEndDate: projectForm.value.executionEndDate || null,
+      singlePeriodLimitAmount: projectForm.value.singlePeriodLimitAmount,
       supportCompany: projectForm.value.supportCompany,
       responsiblePersonIds: projectForm.value.responsiblePersonIds,
     }
@@ -546,8 +674,110 @@ const handleToggleActive = async (row: Project) => {
   await fetchProjects()
 }
 
+const normalizePeriodsForForm = (periods: ProjectPeriod[] = []) => {
+  return periods
+    .map((item, index) => ({
+      ...item,
+      periodName: item.periodName || '',
+      startDate: normalizeDate(item.startDate),
+      endDate: normalizeDate(item.endDate),
+      sortOrder: item.sortOrder ?? index,
+      isActive: item.isActive !== false,
+    }))
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+}
+
+const openPeriodDialog = async (row: Project) => {
+  currentProjectId.value = row.id
+  currentProjectName.value = row.name
+  periodForm.value.periods = normalizePeriodsForForm(row.periods || [])
+  periodDialogVisible.value = true
+
+  try {
+    const response = await projectApi.getPeriods(row.id)
+    periodForm.value.periods = normalizePeriodsForForm(response.data)
+  } catch (error) {
+    console.error('获取项目期数失败，使用列表数据回显:', error)
+  }
+}
+
+const openPeriodEdit = (row?: ProjectPeriod, index?: number) => {
+  periodEditIndex.value = typeof index === 'number' ? index : null
+  periodEditForm.value = {
+    ...row,
+    periodName: row?.periodName || '',
+    startDate: normalizeDate(row?.startDate),
+    endDate: normalizeDate(row?.endDate),
+    isActive: row?.isActive !== false,
+  }
+  periodEditVisible.value = true
+}
+
+const confirmPeriodEdit = () => {
+  const periodName = periodEditForm.value.periodName.trim()
+  if (!periodName) {
+    ElMessage.warning('请输入期数名称')
+    return
+  }
+  if (!periodEditForm.value.startDate && !periodEditForm.value.endDate) {
+    ElMessage.warning('请至少选择开始日期或结束日期')
+    return
+  }
+  if (
+    periodEditForm.value.startDate &&
+    periodEditForm.value.endDate &&
+    periodEditForm.value.startDate > periodEditForm.value.endDate
+  ) {
+    ElMessage.warning('开始日期不能晚于结束日期')
+    return
+  }
+
+  const nextPeriod: ProjectPeriod = {
+    ...periodEditForm.value,
+    periodName,
+    startDate: periodEditForm.value.startDate || null,
+    endDate: periodEditForm.value.endDate || null,
+    isActive: periodEditForm.value.isActive !== false,
+  }
+
+  if (periodEditIndex.value !== null) {
+    periodForm.value.periods[periodEditIndex.value] = nextPeriod
+  } else {
+    periodForm.value.periods.push(nextPeriod)
+  }
+  periodForm.value.periods = normalizePeriodsForForm(periodForm.value.periods)
+  periodEditVisible.value = false
+}
+
+const removePeriod = (index: number) => {
+  periodForm.value.periods.splice(index, 1)
+  periodForm.value.periods = normalizePeriodsForForm(periodForm.value.periods)
+}
+
+const savePeriods = async () => {
+  if (currentProjectId.value === null) return
+  saving.value = true
+  try {
+    const periods = periodForm.value.periods.map((item, index) => ({
+      ...item,
+      periodName: item.periodName.trim(),
+      startDate: item.startDate || null,
+      endDate: item.endDate || null,
+      sortOrder: index,
+      isActive: item.isActive !== false,
+    }))
+    const response = await projectApi.updatePeriods(currentProjectId.value, periods)
+    periodForm.value.periods = normalizePeriodsForForm(response.data)
+    ElMessage.success('期数配置已保存')
+    await fetchProjects()
+  } finally {
+    saving.value = false
+  }
+}
+
 const openProvinceDialog = (row: Project) => {
   currentProjectId.value = row.id
+  currentProjectName.value = row.name
   provinceForm.value.provinceLimits = normalizeProvinceLimitsForForm(row)
   provinceDialogVisible.value = true
 }

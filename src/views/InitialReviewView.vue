@@ -78,6 +78,7 @@
                 end-placeholder="结束日期"
                 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD"
+                :disabled-date="disableBeforeDatePickerMinDate"
                 style="width: 100%"
               />
             </el-form-item>
@@ -205,6 +206,20 @@
       :close-on-click-modal="false"
     >
       <div v-if="currentApplicationDetail" class="review-dialog-content">
+        <el-tabs
+          v-if="relatedApplications.length > 1"
+          v-model="activeRelatedApplicationId"
+          class="application-number-tabs"
+          @tab-change="handleRelatedApplicationChange"
+        >
+          <el-tab-pane
+            v-for="item in relatedApplications"
+            :key="item.id"
+            :label="item.applicationNumber"
+            :name="String(item.id)"
+          />
+        </el-tabs>
+
         <!-- 申请基本信息 -->
         <div class="application-header">
           <h3>{{ currentApplicationDetail.applicationNumber }} - {{ currentApplicationDetail.recipientName }}</h3>
@@ -313,10 +328,12 @@ import { ElMessage } from 'element-plus'
 
 
 import { useApplicationStore } from '@/stores/application'
+import { adminApplicationAPI, type RelatedApplicationItem } from '@/api/admin-application'
 import BasicInfoDisplay from '@/components/common/BasicInfoDisplay.vue'
 import FileUploadSection from '@/components/common/FileUploadSection.vue'
 import InvoiceUploadForm from '@/components/common/InvoiceUploadForm.vue'
 import type { ApplicationListItem } from '@/types/application'
+import { disableBeforeDatePickerMinDate } from '@/utils/datePicker'
 
 
 const applicationStore = useApplicationStore()
@@ -404,6 +421,8 @@ const mapInvoiceFiles = (
 const currentApplicationDetail = ref<ApplicationDetail | null>(null)
 const submitting = ref(false)
 const activeUploadTab = ref('documents')
+const relatedApplications = ref<RelatedApplicationItem[]>([])
+const activeRelatedApplicationId = ref('')
 const reviewComment = ref('')
 const reviewOpinionVisible = ref(false)
 const reviewResult = ref('approve')
@@ -434,6 +453,10 @@ const applicationBasicInfo = computed(() => {
       bankAccountName: '',
       bankName: '',
       bankAccountNumber: '',
+      threeElementVerified: false,
+      threeElementVerifiedAt: '',
+      threeElementVerificationStatus: '',
+      threeElementVerificationMessage: '',
       caseDescription: ''
     }
   }
@@ -462,6 +485,10 @@ const applicationBasicInfo = computed(() => {
     bankAccountName: String(app.bankAccountName || ''),
     bankName: String(app.bankName || ''),
     bankAccountNumber: String(app.bankAccountNumber || ''),
+    threeElementVerified: Boolean(app.threeElementVerified),
+    threeElementVerifiedAt: String(app.threeElementVerifiedAt || ''),
+    threeElementVerificationStatus: String(app.threeElementVerificationStatus || ''),
+    threeElementVerificationMessage: String(app.threeElementVerificationMessage || ''),
     caseDescription: String(app.caseDescription || '')
   }
 })
@@ -489,11 +516,10 @@ const applicationDocuments = computed(() => {
       recognizedName: String(file.recognizedName || ''),
       recognizedIdNumber: String(file.recognizedIdNumber || ''),
       recognizedVisitDate: String(file.recognizedVisitDate || ''),
+      ocrRawText: String(file.ocrRawText || ''),
+      ocrPayload: String(file.ocrPayload || ''),
       verificationStatus: String(file.verificationStatus || ''),
-      verificationMessage: String(file.verificationMessage || ''),
-      // 兼容旧格式
-      name: String(file.originalName || ''),
-      uid: Number(file.id) || Date.now()
+      verificationMessage: String(file.verificationMessage || '')
     }))
 })
 
@@ -655,28 +681,39 @@ const fetchApplications = () => {
 }
 
 
+const loadApplicationDetail = async (applicationId: number) => {
+  const detail = await applicationStore.fetchAdminApplicationDetail(applicationId)
+
+  // 转换文件数据格式以匹配前端组件期望的格式
+  if (detail.files && detail.files.length > 0) {
+    detail.files = detail.files.map((file: Record<string, unknown>) => ({
+      ...file,
+      fileUrl: file.url || file.path || '',
+      fileSize: file.size || 0
+    }))
+  }
+
+  currentApplicationDetail.value = detail as ApplicationDetail
+  activeRelatedApplicationId.value = String(applicationId)
+  const relatedItem = relatedApplications.value.find((item) => item.id === applicationId)
+  selectedApplication.value = {
+    id: applicationId,
+    applicationNumber: String(detail.applicationNumber || relatedItem?.applicationNumber || ''),
+    recipientName: String(detail.recipientName || relatedItem?.recipientName || ''),
+    status: String(detail.status || relatedItem?.status || '') as ApplicationListItem['status'],
+    createdAt: String(detail.createdAt || relatedItem?.createdAt || ''),
+    updatedAt: String(detail.updatedAt || detail.createdAt || relatedItem?.createdAt || ''),
+  }
+}
+
 const openReviewDialog = async (application: ApplicationListItem) => {
   selectedApplication.value = application
   submitting.value = true
-  
-  try {
-    
-    // 使用管理员API根据申请ID查询完整的申请信息
-    const detail = await applicationStore.fetchAdminApplicationDetail(application.id)
-    
-    // 转换文件数据格式以匹配前端组件期望的格式
-    if (detail.files && detail.files.length > 0) {
-      detail.files = detail.files.map((file: Record<string, unknown>) => ({
-        ...file,
-        fileUrl: file.url || file.path || '',
-        fileSize: file.size || 0
-      }))
-    }
-    
-    currentApplicationDetail.value = detail as ApplicationDetail
-    
 
-    
+  try {
+    relatedApplications.value = await adminApplicationAPI.getRelatedApplications(application.id)
+    await loadApplicationDetail(application.id)
+
     reviewDialogVisible.value = true
     activeUploadTab.value = 'documents'
     reviewComment.value = '' // 清空审核评论
@@ -688,7 +725,22 @@ const openReviewDialog = async (application: ApplicationListItem) => {
   }
 }
 
+const handleRelatedApplicationChange = async (name: string | number) => {
+  const applicationId = Number(name)
+  if (!applicationId || applicationId === currentApplicationDetail.value?.id) return
 
+  submitting.value = true
+  try {
+    await loadApplicationDetail(applicationId)
+    activeUploadTab.value = 'documents'
+    reviewComment.value = ''
+  } catch (error) {
+    console.error('切换申请详情失败:', error)
+    ElMessage.error('切换申请详情失败')
+  } finally {
+    submitting.value = false
+  }
+}
 
 // 打开审核意见对话框
 const openReviewOpinionDialog = () => {
@@ -721,19 +773,7 @@ const submitReviewOpinion = async () => {
       comment
     )
     
-    // 重新获取申请详情以更新状态
-    const updatedDetail = await applicationStore.fetchAdminApplicationDetail(selectedApplication.value.id)
-    
-    // 转换文件数据格式
-    if (updatedDetail.files && updatedDetail.files.length > 0) {
-      updatedDetail.files = updatedDetail.files.map((file: Record<string, unknown>) => ({
-        ...file,
-        fileUrl: file.url || file.path || '',
-        fileSize: file.size || 0
-      }))
-    }
-    
-    currentApplicationDetail.value = updatedDetail as ApplicationDetail
+    await loadApplicationDetail(selectedApplication.value.id)
     
     // 刷新列表显示最新状态
     fetchApplications()
@@ -1001,6 +1041,10 @@ onMounted(() => {
 
 :deep(.el-tabs__content) {
   padding-top: 15px;
+}
+
+.application-number-tabs {
+  margin-bottom: 16px;
 }
 
 

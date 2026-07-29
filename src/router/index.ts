@@ -58,6 +58,16 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/enrollment-management',
+    name: 'EnrollmentManagement',
+    component: () => import('@/views/EnrollmentManagementView.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.INITIAL_REVIEWER],
+      title: '入组管理'
+    },
+  },
+  {
     path: '/application/:id',
     name: 'ApplicationDetail',
     component: () => import('@/views/ApplicationDetailView.vue'),

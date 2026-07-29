@@ -33,6 +33,9 @@ export type {
   FinanceOperationRequest
 } from './finance'
 
+export { enrollmentAPI } from './enrollment'
+export type { EnrollmentListItem, EnrollmentListResponse, EnrollmentSearchParams } from './enrollment'
+
 // Export user and admin APIs
 export { userAPI, adminAPI, userApi, adminApi } from './user'
 export type { UserAPI, AdminAPI } from './user'
@@ -42,6 +45,7 @@ import { authAPI } from './auth'
 import { applicationAPI } from './application'
 import { dashboardAPI } from './dashboard'
 import { financeAPI } from './finance'
+import { enrollmentAPI } from './enrollment'
 import { userAPI, adminAPI } from './user'
 
 // Centralized API object for easy access
@@ -50,6 +54,7 @@ export const API = {
   application: applicationAPI,
   dashboard: dashboardAPI,
   finance: financeAPI,
+  enrollment: enrollmentAPI,
   user: userAPI,
   admin: adminAPI
 } as const

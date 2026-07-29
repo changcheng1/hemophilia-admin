@@ -1,11 +1,11 @@
 <template>
   <div class="basic-info-display">
-    <!-- 患者信息 -->
+    <!-- 受捐人信息 -->
     <div class="info-section">
-      <h3 class="section-title">患者信息</h3>
+      <h3 class="section-title">受捐人信息</h3>
       <div class="info-list">
         <div class="info-item">
-          <span class="info-label">患者姓名</span>
+          <span class="info-label">受捐人姓名</span>
           <span class="info-value">{{ formData.recipientName || '-' }}</span>
         </div>
         <div class="info-item">
@@ -53,7 +53,7 @@
       <h3 class="section-title">监护人信息</h3>
       <div class="info-list">
         <div class="info-item">
-          <span class="info-label">和患者关系</span>
+          <span class="info-label">和受捐人关系</span>
           <span class="info-value">{{ formData.guardianRelationship || '-' }}</span>
           
         </div>
@@ -126,7 +126,7 @@
 import { computed } from 'vue'
 
 interface FormData {
-  // 患者信息
+  // 受捐人信息
   recipientName?: string
   idType?: string
   idNumber?: string

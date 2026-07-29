@@ -22,6 +22,14 @@ export const useMenuStore = defineStore('menu', () => {
       ],
     },
     {
+      id: 'enrollment-management',
+      title: '入组管理',
+      icon: 'UserFilled',
+      path: '/enrollment-management',
+      component: 'EnrollmentManagement',
+      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.INITIAL_REVIEWER],
+    },
+    {
       id: 'initial-review',
       title: '初审管理',
       icon: 'Document',

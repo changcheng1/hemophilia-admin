@@ -23,7 +23,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item label="患者姓名">
+            <el-form-item label="受捐人姓名">
               <el-input
                 v-model="searchForm.recipientName"
                 placeholder="请输入"
@@ -91,7 +91,7 @@
       >
         <el-table-column prop="id" label="用户ID" width="90" />
         <el-table-column prop="phone" label="手机号" width="130" />
-        <el-table-column prop="recipientName" label="患者姓名" width="120" show-overflow-tooltip>
+        <el-table-column prop="recipientName" label="受捐人姓名" width="120" show-overflow-tooltip>
           <template #default="{ row }">{{ formatText(row.recipientName) }}</template>
         </el-table-column>
         <el-table-column prop="idType" label="证件类型" width="100">

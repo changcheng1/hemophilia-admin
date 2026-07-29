@@ -57,7 +57,7 @@
                 </el-tag>
               </div>
               <div
-                v-if="file.ocrRawText && isMedicalTextFile(file)"
+                v-if="file.ocrRawText && isMedicalTextFile(file) && file.fileType !== 'medical_record'"
                 class="ocr-snippet"
                 :title="file.ocrRawText"
               >
@@ -357,12 +357,16 @@ const verificationTags = (
   if (file.recognizedName) {
     tags.push({ label: '姓名', value: file.recognizedName, type: 'info' })
   }
-  if (file.recognizedIdNumber) {
-    tags.push({ label: '身份证号', value: file.recognizedIdNumber, type: 'info' })
-  }
   const visitDate = formatRecognizedDate(file.recognizedVisitDate)
   if (visitDate) {
     tags.push({ label: '就诊日期', value: visitDate, type: 'info' })
+  }
+  // 病例核验只展示图片提取出的姓名和就诊日期。
+  if (file.fileType === 'medical_record') {
+    return tags
+  }
+  if (file.recognizedIdNumber) {
+    tags.push({ label: '身份证号', value: file.recognizedIdNumber, type: 'info' })
   }
   if (getVerificationText(file)) {
     tags.push({

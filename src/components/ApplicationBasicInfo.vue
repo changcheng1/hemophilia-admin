@@ -85,7 +85,7 @@
               {{ application.guardianIdNumber || '-' }}
             </el-descriptions-item>
 
-            <el-descriptions-item label="与患者关系">
+            <el-descriptions-item label="与受捐人关系">
               {{ application.guardianRelationship || '-' }}
             </el-descriptions-item>
 

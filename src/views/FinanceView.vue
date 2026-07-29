@@ -32,7 +32,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item label="患者姓名">
+            <el-form-item label="受捐人姓名">
               <el-input
                 v-model="searchForm.recipientName"
                 placeholder="请输入"
@@ -128,7 +128,7 @@
             {{ row.user?.phone || '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="recipientName" label="患者姓名"  />
+        <el-table-column prop="recipientName" label="受捐人姓名"  />
         <el-table-column prop="idType" label="证件类型" />
         <el-table-column prop="idNumber" label="证件号码" />
         <el-table-column prop="totalReimbursementAmount" label="申请金额" width="120">

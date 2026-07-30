@@ -60,6 +60,7 @@ export interface AdminApplicationListResponse {
 export interface UpdateStatusRequest {
   status: string
   comment?: string
+  disbursementAmount?: number
 }
 
 export interface BatchUpdateStatusRequest {
@@ -71,11 +72,13 @@ export interface BatchUpdateStatusRequest {
 export interface InitialReviewRequest {
   result: 'approve' | 'doubt'
   comment: string
+  disbursementAmount?: number
 }
 
 export interface FinalReviewRequest {
   result: 'approve' | 'reject'
   comment: string
+  disbursementAmount?: number
 }
 
 export interface SpotCheckRequest {
@@ -124,8 +127,10 @@ export interface ApplicationInvoiceData {
   transportReimbursementAmount: number
   accommodationReimbursementAmount: number
   totalReimbursementAmount: number
+  verifiedInvoiceTotalAmount: number
   transportInvoices: any[]
   accommodationInvoices: any[]
+  medicalInvoices: any[]
 }
 
 export interface ApplicationFileVerificationItem {
@@ -166,6 +171,7 @@ export interface InvoiceVerificationResponse {
   totalAmount: number
   transportAmount: number
   accommodationAmount: number
+  medicalAmount: number
   verifiedCount: number
   failedCount: number
   files: ApplicationFileVerificationItem[]

@@ -1,15 +1,5 @@
 <template>
   <div class="file-upload-section">
-    <div class="section-actions" v-if="canVerifyMedicalRecords && applicationId">
-      <el-button
-        type="primary"
-        :loading="verifying"
-        @click="handleVerifyMedicalRecords"
-      >
-        病例核验
-      </el-button>
-    </div>
-
     <!-- 按文件类型分组展示 -->
     <div v-for="group in fileGroups" :key="group.type" class="file-group">
       <div class="group-header">
@@ -123,8 +113,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Document, Download, Plus } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { adminApplicationAPI, type MedicalRecordVerificationResponse } from '@/api/admin-application'
 import { normalizeFileUrl } from '@/utils/fileHandler'
 
 interface FileItem {
@@ -162,18 +150,15 @@ interface Props {
   requirements?: string[]
   maxCount?: number
   applicationId?: number
-  canVerifyMedicalRecords?: boolean
   readonly?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   maxCount: 10,
-  canVerifyMedicalRecords: true,
 })
 
 const previewVisible = ref(false)
 const currentPreviewFile = ref<FileItem | null>(null)
-const verifying = ref(false)
 const localFiles = ref<FileItem[]>([])
 
 watch(
@@ -228,6 +213,12 @@ const fileGroups = computed((): FileGroup[] => {
       type: 'medical_invoice',
       title: '医疗发票及费用清单',
       description: '医疗收费票据、费用清单等材料',
+      files: []
+    },
+    {
+      type: 'hardship_material',
+      title: '困难材料',
+      description: '低保证或社区、街道办、居委会、村委会出具并盖鲜章的困难证明材料',
       files: []
     },
 
@@ -306,64 +297,21 @@ const handlePreviewClose = () => {
   currentPreviewFile.value = null
 }
 
-const handleVerifyMedicalRecords = async () => {
-  if (!props.applicationId) {
-    ElMessage.warning('缺少申请ID，无法核验')
-    return
-  }
-
-  verifying.value = true
-  try {
-    const result = await adminApplicationAPI.verifyMedicalRecords(props.applicationId)
-    syncVerificationResult(result)
-    ElMessage.success(result.summaryMessage || '病例核验完成')
-  } catch (error) {
-    console.error('病例核验失败:', error)
-    ElMessage.error('病例核验失败')
-  } finally {
-    verifying.value = false
-  }
-}
-
-const syncVerificationResult = (result: MedicalRecordVerificationResponse) => {
-  result.results?.forEach((item) => {
-    const index = localFiles.value.findIndex((file) => Number(file.id) === Number(item.id))
-    if (index >= 0) {
-      const currentFile = localFiles.value[index]
-      if (!currentFile) return
-      localFiles.value[index] = {
-        ...currentFile,
-        id: Number(item.id) || currentFile.id,
-        fileType: String(item.fileType || currentFile.fileType || ''),
-        originalName: String(item.originalName || currentFile.originalName || ''),
-        recognizedName: String(item.recognizedName || ''),
-        recognizedIdNumber: String(item.recognizedIdNumber || ''),
-        recognizedVisitDate: item.recognizedVisitDate ? String(item.recognizedVisitDate) : '',
-        ocrRawText: String(item.ocrRawText || ''),
-        ocrPayload: String(item.ocrPayload || ''),
-        verificationStatus: String(item.verificationStatus || ''),
-        verificationMessage: String(item.verificationMessage || ''),
-      }
-    }
-  })
-}
-
 const getVerificationText = (file: FileItem): string => file.verificationMessage || ''
 
 const verificationTags = (
   file: FileItem,
 ): Array<{ label: string; value: string; type: 'success' | 'warning' | 'danger' | 'info' }> => {
   const tags: Array<{ label: string; value: string; type: 'success' | 'warning' | 'danger' | 'info' }> = []
+  if (file.fileType === 'medical_record') {
+    return tags
+  }
   if (file.recognizedName) {
     tags.push({ label: '姓名', value: file.recognizedName, type: 'info' })
   }
   const visitDate = formatRecognizedDate(file.recognizedVisitDate)
   if (visitDate) {
     tags.push({ label: '就诊日期', value: visitDate, type: 'info' })
-  }
-  // 病例核验只展示图片提取出的姓名和就诊日期。
-  if (file.fileType === 'medical_record') {
-    return tags
   }
   if (file.recognizedIdNumber) {
     tags.push({ label: '身份证号', value: file.recognizedIdNumber, type: 'info' })

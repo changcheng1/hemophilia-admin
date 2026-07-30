@@ -253,10 +253,19 @@ export const useApplicationStore = defineStore('application', () => {
     }
   }
 
-  const updateApplicationStatus = async (id: number, status: string, comment?: string) => {
+  const updateApplicationStatus = async (
+    id: number,
+    status: string,
+    comment?: string,
+    disbursementAmount?: number,
+  ) => {
     loading.value = true
     try {
-      await adminApplicationAPI.updateApplicationStatus(id, { status, comment })
+      await adminApplicationAPI.updateApplicationStatus(id, {
+        status,
+        comment,
+        disbursementAmount,
+      })
       
       // 更新本地状态
       const index = applications.value.findIndex(app => app.id === id)
@@ -303,10 +312,19 @@ export const useApplicationStore = defineStore('application', () => {
     }
   }
 
-  const finalReview = async (id: number, result: 'approve' | 'reject', comment: string) => {
+  const finalReview = async (
+    id: number,
+    result: 'approve' | 'reject',
+    comment: string,
+    disbursementAmount?: number,
+  ) => {
     loading.value = true
     try {
-      await adminApplicationAPI.finalReview(id, { result, comment })
+      await adminApplicationAPI.finalReview(id, {
+        result,
+        comment,
+        disbursementAmount,
+      })
       
       // 更新本地状态
       const newStatus = result === 'approve' ? 'final_approved' : 'rejected'

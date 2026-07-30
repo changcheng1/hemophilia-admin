@@ -255,6 +255,8 @@
                 <InvoiceUploadForm
                   v-model="applicationInvoices"
                   :application-id="currentApplicationDetail.id"
+                  :editable-disbursement-amount="true"
+                  @disbursement-amount-change="reviewDisbursementAmount = $event"
                 />
               </el-tab-pane>
             </el-tabs>
@@ -351,6 +353,7 @@ const searchForm = reactive({
 
 const reviewDialogVisible = ref(false)
 const selectedApplication = ref<ApplicationListItem | null>(null)
+const reviewDisbursementAmount = ref(0)
 
 interface ApplicationDetail {
   id: number
@@ -500,7 +503,8 @@ const applicationDocuments = computed(() => {
   return currentApplicationDetail.value.files
     .filter((file: Record<string, unknown>) => 
       file.fileType !== 'transport_invoice' && 
-      file.fileType !== 'accommodation_invoice'
+      file.fileType !== 'accommodation_invoice' &&
+      file.fileType !== 'medical_invoice'
     )
     .map((file: Record<string, unknown>) => ({
       id: Number(file.id) || undefined,
@@ -530,8 +534,13 @@ const applicationInvoices = computed(() => {
       totalReimbursementAmount: 0,
       transportReimbursementAmount: 0,
       accommodationReimbursementAmount: 0,
+      medicalInvoiceAmount: 0,
+      verifiedInvoiceTotalAmount: 0,
+      singlePeriodLimitAmount: 0,
+      disbursementAmount: null,
       transportInvoiceFiles: [],
-      accommodationInvoiceFiles: []
+      accommodationInvoiceFiles: [],
+      medicalInvoiceFiles: []
     }
   }
   
@@ -540,14 +549,23 @@ const applicationInvoices = computed(() => {
   const files = (app.files || []) as Record<string, unknown>[]
   const transportFiles = mapInvoiceFiles(files, 'transport_invoice', '交通费发票')
   const accommodationFiles = mapInvoiceFiles(files, 'accommodation_invoice', '住宿费发票')
+  const medicalFiles = mapInvoiceFiles(files, 'medical_invoice', '医疗发票及费用清单')
   
   return {
     applicationId: Number(app.id) || 0,
     totalReimbursementAmount: Number(app.totalReimbursementAmount) || 0,
     transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,
     accommodationReimbursementAmount: Number(app.accommodationReimbursementAmount) || 0,
+    medicalInvoiceAmount: Number(app.medicalInvoiceAmount) || 0,
+    verifiedInvoiceTotalAmount: Number(app.verifiedInvoiceTotalAmount) || 0,
+    singlePeriodLimitAmount: Number(app.singlePeriodLimitAmount) || 0,
+    disbursementAmount:
+      app.disbursementAmount === null || app.disbursementAmount === undefined
+        ? null
+        : Number(app.disbursementAmount),
     transportInvoiceFiles: transportFiles,
-    accommodationInvoiceFiles: accommodationFiles
+    accommodationInvoiceFiles: accommodationFiles,
+    medicalInvoiceFiles: medicalFiles
   }
 })
 
@@ -770,7 +788,8 @@ const submitReviewOpinion = async () => {
     await applicationStore.updateApplicationStatus(
       selectedApplication.value.id, 
       status,
-      comment
+      comment,
+      reviewDisbursementAmount.value,
     )
     
     await loadApplicationDetail(selectedApplication.value.id)

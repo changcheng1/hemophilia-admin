@@ -139,7 +139,7 @@
         <el-table-column prop="disbursementAmount" label="发放金额" width="120">
           <template #default="{ row }">
             <span style="color: #f56c6c; font-weight: 500;">
-              {{ formatOptionalCurrency(row.disbursementAmount) }}
+              {{ formatOptionalCurrency(getDisplayDisbursementAmount(row)) }}
             </span>
           </template>
         </el-table-column>
@@ -410,8 +410,17 @@ const toAmountNumber = (value: unknown): number | null => {
   return Number.isFinite(amount) ? amount : null
 }
 
-const getDisplayDisbursementAmount = (application: { disbursementAmount?: unknown }): number => {
-  return toAmountNumber(application.disbursementAmount) ?? 0
+const getDisplayDisbursementAmount = (application: {
+  disbursementAmount?: unknown
+  singlePeriodLimitAmount?: unknown
+  totalReimbursementAmount?: unknown
+}): number => {
+  return (
+    toAmountNumber(application.disbursementAmount) ??
+    toAmountNumber(application.singlePeriodLimitAmount) ??
+    toAmountNumber(application.totalReimbursementAmount) ??
+    0
+  )
 }
 
 const formatCurrency = (value: unknown): string => {
@@ -698,7 +707,7 @@ const handleDisburse = async (application: ApplicationListItem | FinanceSummaryR
     for (const item of payableApplications) {
       await adminApplicationAPI.disburseApplication(item.id, {
         comment: '财务发放完成',
-        amount: toAmountNumber(item.totalReimbursementAmount) ?? 0,
+        amount: getDisplayDisbursementAmount(item),
       })
     }
 

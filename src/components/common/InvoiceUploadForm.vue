@@ -1,8 +1,12 @@
 <template>
   <div class="invoice-upload-form">
-    <!-- 总金额显示 -->
+    <!-- 金额汇总 -->
     <div class="total-amount-header">
       <div class="amount-card">
+        <div class="amount-content">
+          <span class="amount-label">申请金额</span>
+          <span class="amount-value">¥{{ formatAmount(requestAmount) }}</span>
+        </div>
         <div class="amount-content">
           <span class="amount-label">发票总计</span>
           <span class="amount-value">¥{{ formatAmount(totalAmount) }}</span>
@@ -10,6 +14,23 @@
         <div class="amount-sub">
           <span>交通票合计 ¥{{ formatAmount(transportAmount) }}</span>
           <span>住宿票合计 ¥{{ formatAmount(accommodationAmount) }}</span>
+        </div>
+        <div class="amount-content limit-row">
+          <span class="amount-label">上限金额</span>
+          <span class="amount-value">¥{{ formatAmount(limitAmount) }}</span>
+        </div>
+        <div class="amount-content disbursement-row">
+          <span class="amount-label">发放金额</span>
+          <el-input-number
+            v-if="editableDisbursementAmount"
+            v-model="localDisbursementAmount"
+            :min="0"
+            :max="limitAmount || undefined"
+            :precision="2"
+            controls-position="right"
+            @change="handleDisbursementAmountChange"
+          />
+          <span v-else class="amount-value">¥{{ formatAmount(localDisbursementAmount) }}</span>
         </div>
       </div>
     </div>
@@ -27,9 +48,21 @@
     <div v-for="group in invoiceGroups" :key="group.type" class="file-group">
       <div class="group-header">
         <h3 class="group-title">{{ group.title }}</h3>
-        <span class="group-count" v-if="group.files.length > 0">
-          ({{ group.files.length }})
-        </span>
+        <div class="group-actions">
+          <span class="group-count" v-if="group.files.length > 0">
+            ({{ group.files.length }})
+          </span>
+          <el-button
+            v-if="group.type === 'medical_invoice'"
+            type="primary"
+            plain
+            size="small"
+            :loading="verifying"
+            @click.stop="handleVerifyInvoices"
+          >
+            医疗发票核验
+          </el-button>
+        </div>
       </div>
       
       <div class="group-content">
@@ -139,10 +172,15 @@ interface FileItem {
 interface InvoiceData {
   applicationId?: number
   totalReimbursementAmount?: string | number
+  verifiedInvoiceTotalAmount?: string | number
+  singlePeriodLimitAmount?: string | number
+  disbursementAmount?: string | number | null
   transportReimbursementAmount?: string | number
   accommodationReimbursementAmount?: string | number
+  medicalInvoiceAmount?: string | number
   transportInvoiceFiles?: FileItem[]
   accommodationInvoiceFiles?: FileItem[]
+  medicalInvoiceFiles?: FileItem[]
 }
 
 interface InvoiceGroup {
@@ -154,9 +192,15 @@ interface InvoiceGroup {
 interface Props {
   modelValue: InvoiceData
   readonly?: boolean
+  editableDisbursementAmount?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  editableDisbursementAmount: false,
+})
+const emit = defineEmits<{
+  'disbursement-amount-change': [value: number]
+}>()
 
 const previewVisible = ref(false)
 const currentPreviewFile = ref<FileItem | null>(null)
@@ -164,11 +208,17 @@ const verifying = ref(false)
 const localInvoiceData = ref<InvoiceData>({
   applicationId: undefined,
   totalReimbursementAmount: 0,
+  verifiedInvoiceTotalAmount: 0,
+  singlePeriodLimitAmount: 0,
+  disbursementAmount: null,
   transportReimbursementAmount: 0,
   accommodationReimbursementAmount: 0,
+  medicalInvoiceAmount: 0,
   transportInvoiceFiles: [],
   accommodationInvoiceFiles: [],
+  medicalInvoiceFiles: [],
 })
+const localDisbursementAmount = ref(0)
 
 watch(
   () => props.modelValue,
@@ -176,11 +226,23 @@ watch(
     localInvoiceData.value = {
       applicationId: value?.applicationId,
       totalReimbursementAmount: value?.totalReimbursementAmount || 0,
+      verifiedInvoiceTotalAmount: value?.verifiedInvoiceTotalAmount || 0,
+      singlePeriodLimitAmount: value?.singlePeriodLimitAmount || 0,
+      disbursementAmount: value?.disbursementAmount ?? null,
       transportReimbursementAmount: value?.transportReimbursementAmount || 0,
       accommodationReimbursementAmount: value?.accommodationReimbursementAmount || 0,
+      medicalInvoiceAmount: value?.medicalInvoiceAmount || 0,
       transportInvoiceFiles: (value?.transportInvoiceFiles || []).map((item) => ({ ...item })),
       accommodationInvoiceFiles: (value?.accommodationInvoiceFiles || []).map((item) => ({ ...item })),
+      medicalInvoiceFiles: (value?.medicalInvoiceFiles || []).map((item) => ({ ...item })),
     }
+    localDisbursementAmount.value = Number(
+      value?.disbursementAmount ??
+        value?.singlePeriodLimitAmount ??
+        value?.totalReimbursementAmount ??
+        0,
+    )
+    emit('disbursement-amount-change', localDisbursementAmount.value)
   },
   { immediate: true, deep: true },
 )
@@ -193,6 +255,7 @@ const transportInvoiceFiles = computed(() => localInvoiceData.value.transportInv
 
 // 住宿费发票文件
 const accommodationInvoiceFiles = computed(() => localInvoiceData.value.accommodationInvoiceFiles || [])
+const medicalInvoiceFiles = computed(() => localInvoiceData.value.medicalInvoiceFiles || [])
 
 const invoiceGroups = computed((): InvoiceGroup[] => [
   {
@@ -205,11 +268,20 @@ const invoiceGroups = computed((): InvoiceGroup[] => [
     title: '住宿费发票',
     files: accommodationInvoiceFiles.value,
   },
+  {
+    type: 'medical_invoice',
+    title: '医疗发票及费用清单',
+    files: medicalInvoiceFiles.value,
+  },
 ])
 
-// 总金额
+const requestAmount = computed(() =>
+  parseFloat(String(localInvoiceData.value.totalReimbursementAmount || 0)) || 0,
+)
+
+// OCR 核验后的发票总金额，不覆盖用户填写的申请金额。
 const totalAmount = computed(() => {
-  return parseFloat(String(localInvoiceData.value.totalReimbursementAmount || 0)) || 0
+  return parseFloat(String(localInvoiceData.value.verifiedInvoiceTotalAmount || 0)) || 0
 })
 
 const transportAmount = computed(() => {
@@ -219,6 +291,15 @@ const transportAmount = computed(() => {
 const accommodationAmount = computed(() => {
   return parseFloat(String(localInvoiceData.value.accommodationReimbursementAmount || 0)) || 0
 })
+
+const limitAmount = computed(() =>
+  parseFloat(String(localInvoiceData.value.singlePeriodLimitAmount || 0)) || 0,
+)
+
+const handleDisbursementAmountChange = (value?: number) => {
+  const amount = Number(value || 0)
+  emit('disbursement-amount-change', amount)
+}
 
 // 获取处理后的文件 URL
 const getFileUrl = (file: FileItem): string => {
@@ -265,9 +346,10 @@ const handleVerifyInvoices = async () => {
 }
 
 const syncVerificationResult = (result: InvoiceVerificationResponse) => {
-  localInvoiceData.value.totalReimbursementAmount = result.totalAmount
+  localInvoiceData.value.verifiedInvoiceTotalAmount = result.totalAmount
   localInvoiceData.value.transportReimbursementAmount = result.transportAmount
   localInvoiceData.value.accommodationReimbursementAmount = result.accommodationAmount
+  localInvoiceData.value.medicalInvoiceAmount = result.medicalAmount
 
   const replaceFiles = (files: FileItem[] = []) =>
     files.map((file) => {
@@ -291,6 +373,9 @@ const syncVerificationResult = (result: InvoiceVerificationResponse) => {
   )
   localInvoiceData.value.accommodationInvoiceFiles = replaceFiles(
     localInvoiceData.value.accommodationInvoiceFiles,
+  )
+  localInvoiceData.value.medicalInvoiceFiles = replaceFiles(
+    localInvoiceData.value.medicalInvoiceFiles,
   )
 }
 
@@ -363,10 +448,13 @@ const formatFileSize = (size: number | undefined): string => {
     margin-bottom: 24px;
 
     .amount-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
       .amount-sub {
         display: flex;
         gap: 24px;
-        margin-top: 10px;
         font-size: 13px;
         color: #606266;
       }
@@ -382,10 +470,10 @@ const formatFileSize = (size: number | undefined): string => {
           color: #606266;
         }
         .amount-value {
-          font-size: 20px;
-          font-weight: 700;
-          color: red;
-          letter-spacing: 0.5px;
+          font-size: 15px;
+          font-weight: 500;
+          color: #303133;
+          letter-spacing: 0;
         }
       }
     }
@@ -415,6 +503,12 @@ const formatFileSize = (size: number | undefined): string => {
         color: #666;
         font-size: 14px;
         font-weight: 500;
+      }
+
+      .group-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
       }
     }
 
@@ -590,10 +684,6 @@ const formatFileSize = (size: number | undefined): string => {
     border-radius: 8px;
     background: #fafcff;
 
-    .amount-card .amount-content .amount-value {
-      color: #e6a23c;
-      letter-spacing: 0;
-    }
   }
 
   .file-group {

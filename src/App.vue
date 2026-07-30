@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { RouterView, useRoute, useRouter } from 'vue-router'
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
+import { ElConfigProvider } from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
-import MainLayout from '@/components/MainLayout.vue'
 import GlobalErrorHandler from '@/components/GlobalErrorHandler.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+
+// 登录页不加载后台布局及菜单，登录成功后再按需下载。
+const MainLayout = defineAsyncComponent(() => import('@/components/MainLayout.vue'))
 
 const route = useRoute()
 const router = useRouter()
@@ -58,28 +62,30 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div id="app">
-    <!-- Global Error Handler -->
-    <GlobalErrorHandler />
-    
-    <!-- Global Loading Overlay -->
-    <LoadingOverlay
-      :visible="notificationStore.loading"
-      :text="notificationStore.loadingText"
-      full-screen
-    />
+  <ElConfigProvider :locale="zhCn">
+    <div id="app">
+      <!-- Global Error Handler -->
+      <GlobalErrorHandler />
 
-    <!-- 等待路由准备好后再渲染内容 -->
-    <template v-if="isAppReady">
-      <!-- Show auth pages (login/forgot password) without layout -->
-      <RouterView v-if="isAuthPage" />
+      <!-- Global Loading Overlay -->
+      <LoadingOverlay
+        :visible="notificationStore.loading"
+        :text="notificationStore.loadingText"
+        full-screen
+      />
 
-      <!-- Show main layout for authenticated pages -->
-      <MainLayout v-else>
-        <RouterView />
-      </MainLayout>
-    </template>
-  </div>
+      <!-- 等待路由准备好后再渲染内容 -->
+      <template v-if="isAppReady">
+        <!-- Show auth pages (login/forgot password) without layout -->
+        <RouterView v-if="isAuthPage" />
+
+        <!-- Show main layout for authenticated pages -->
+        <MainLayout v-else>
+          <RouterView />
+        </MainLayout>
+      </template>
+    </div>
+  </ElConfigProvider>
 </template>
 
 <style>

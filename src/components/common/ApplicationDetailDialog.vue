@@ -251,7 +251,8 @@ const documents = computed(() => {
   return props.applicationDetail.files
     .filter((file: FileItem) => 
       file.fileType !== 'transport_invoice' && 
-      file.fileType !== 'accommodation_invoice'
+      file.fileType !== 'accommodation_invoice' &&
+      file.fileType !== 'medical_invoice'
     )
     .map((file: FileItem) => ({
       id: Number(file.id) || undefined,
@@ -279,8 +280,13 @@ const invoices = computed(() => {
   if (!props.applicationDetail) {
     return {
       totalReimbursementAmount: 0,
+      verifiedInvoiceTotalAmount: 0,
+      singlePeriodLimitAmount: 0,
+      disbursementAmount: null,
+      medicalInvoiceAmount: 0,
       transportInvoiceFiles: [],
-      accommodationInvoiceFiles: []
+      accommodationInvoiceFiles: [],
+      medicalInvoiceFiles: []
     }
   }
   
@@ -288,14 +294,23 @@ const invoices = computed(() => {
   const files = (app.files || []) as FileItem[]
   const transportFiles = mapInvoiceFiles(files, 'transport_invoice', '交通费发票')
   const accommodationFiles = mapInvoiceFiles(files, 'accommodation_invoice', '住宿费发票')
+  const medicalFiles = mapInvoiceFiles(files, 'medical_invoice', '医疗发票及费用清单')
   
   return {
     applicationId: Number(app.id) || 0,
     totalReimbursementAmount: Number(app.totalReimbursementAmount) || 0,
+    verifiedInvoiceTotalAmount: Number(app.verifiedInvoiceTotalAmount) || 0,
+    singlePeriodLimitAmount: Number(app.singlePeriodLimitAmount) || 0,
+    disbursementAmount:
+      app.disbursementAmount === null || app.disbursementAmount === undefined
+        ? null
+        : Number(app.disbursementAmount),
     transportReimbursementAmount: Number(app.transportReimbursementAmount) || 0,
     accommodationReimbursementAmount: Number(app.accommodationReimbursementAmount) || 0,
+    medicalInvoiceAmount: Number(app.medicalInvoiceAmount) || 0,
     transportInvoiceFiles: transportFiles,
-    accommodationInvoiceFiles: accommodationFiles
+    accommodationInvoiceFiles: accommodationFiles,
+    medicalInvoiceFiles: medicalFiles
   }
 })
 

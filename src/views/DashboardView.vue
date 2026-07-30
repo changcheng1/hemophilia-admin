@@ -228,10 +228,16 @@ watch(activeTab, (newTab) => {
 // 生命周期
 onMounted(async () => {
   try {
-    await dashboardStore.fetchStats()
-    await dashboardStore.fetchProvinceData(activeTab.value, dateRange.value, selectedDimension.value)
-    await dashboardStore.fetchGenderStats()
-    await dashboardStore.fetchAgeStats()
+    await Promise.all([
+      dashboardStore.fetchStats(),
+      dashboardStore.fetchProvinceData(
+        activeTab.value,
+        dateRange.value,
+        selectedDimension.value,
+      ),
+      dashboardStore.fetchGenderStats(),
+      dashboardStore.fetchAgeStats(),
+    ])
   } catch (error) {
     console.error('Failed to load dashboard data:', error)
   }

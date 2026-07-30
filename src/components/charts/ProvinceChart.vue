@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import { echarts, type ECharts } from '@/utils/echarts'
 import type { ProvinceData } from '@/types'
 
 interface Props {
@@ -21,7 +21,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const chartRef = ref<HTMLDivElement>()
-let chartInstance: echarts.ECharts | null = null
+let chartInstance: ECharts | null = null
 
 const initChart = () => {
   if (!chartRef.value) return

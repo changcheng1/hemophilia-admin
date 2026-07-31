@@ -18,7 +18,8 @@ function copyDeploymentFiles() {
       const filesToCopy = [
         'server.cjs',
         'ecosystem.config.cjs',
-        'upload.js'
+        'upload.js',
+        'nginx.conf'
       ]
       
       filesToCopy.forEach(file => {
@@ -98,5 +99,15 @@ export default defineConfig({
   server: {
     port: 3003,
     host: true
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'http-vendor': ['axios'],
+        },
+      },
+    },
   }
 })

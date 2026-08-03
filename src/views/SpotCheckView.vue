@@ -318,7 +318,7 @@ const spotCheckStatuses = [
   { label: '初审存疑', value: 'under_review' },
   { label: '审核通过', value: 'final_approved' },
   { label: '审核退回', value: 'rejected' },
-  { label: '申请发放', value: 'disbursed' }
+  { label: '援助发放', value: 'disbursed' }
 ]
 
 // 添加一个标识来跟踪是否显示随机抽查结果
@@ -354,7 +354,7 @@ const getStatusText = (status: string): string => {
     'under_review': '初审存疑',
     'rejected': '审核退回',
     'final_approved': '审核通过',
-    'disbursed': '申请发放'
+    'disbursed': '援助发放'
   }
   return statusMap[status] || '未知状态'
 }
@@ -399,7 +399,7 @@ const handleCurrentChange = (page: number) => {
 
 const fetchSpotCheckApplications = () => {
   const params: Record<string, unknown> = {}
-  params.maskSensitive = true
+  params.maskSensitive = false
   
   if (searchForm.applicationNumber) {
     params.applicationNumber = searchForm.applicationNumber
@@ -441,7 +441,7 @@ const fetchSpotCheckApplications = () => {
 const handleViewApplication = async (application: ApplicationListItem) => {
   try {
     // 使用管理员API根据申请ID查询完整的申请信息
-    const detail = await applicationStore.fetchAdminApplicationDetail(application.id, { maskSensitive: true })
+    const detail = await applicationStore.fetchAdminApplicationDetail(application.id, { maskSensitive: false })
     
     // 转换文件数据格式以匹配前端组件期望的格式
     if (detail.files && detail.files.length > 0) {
@@ -495,7 +495,7 @@ const executeRandomSpotCheck = async () => {
     const result = await applicationStore.randomSpotCheck(
       randomSpotCheckForm.count,
       'all',
-      { maskSensitive: true }
+      { maskSensitive: false }
     )
     
     console.log('随机抽查结果:', result)

@@ -31,6 +31,7 @@
         <el-input-number
           v-model="form.amount"
           :min="0"
+          :max="maxAmount || undefined"
           :precision="2"
           placeholder="请输入实际发放金额"
           style="width: 100%"
@@ -73,6 +74,7 @@ interface Props {
   applicationId: number
   currentStatus: FinanceStatus
   applicationAmount?: number
+  maxAmount?: number
   loading?: boolean
 }
 

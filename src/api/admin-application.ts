@@ -252,7 +252,7 @@ class AdminApplicationService extends BaseAPIService implements AdminApplication
   }
 
   /**
-   * 抽查管理获取脱敏申请详情
+   * 抽查管理获取完整申请详情
    */
   async getSpotCheckApplicationDetail(id: number): Promise<any> {
     return this.get<any>(`/${id}/spot-check-detail`)

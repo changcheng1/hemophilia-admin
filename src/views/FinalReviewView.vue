@@ -702,6 +702,10 @@ const handleRelatedApplicationChange = async (name: string | number) => {
 // 处理审核记录组件提交的审核
 const handleReviewSubmitted = async (result: 'approve' | 'reject', comment: string) => {
   if (!selectedApplication.value) return
+  if (result === 'approve' && reviewDisbursementAmount.value <= 0) {
+    ElMessage.warning('审核通过前请填写有效的发放金额')
+    return
+  }
   
   try {
     // 使用复核接口

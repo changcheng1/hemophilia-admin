@@ -118,7 +118,7 @@
         <el-table-column prop="applicationNumber" label="申请号" show-overflow-tooltip/>
         <el-table-column prop="donationProject" label="申请项目" />
         <el-table-column prop="donationPeriod" label="援助期数"  />
-        <el-table-column label="上限金额" width="120">
+        <el-table-column label="季度上限" width="120">
           <template #default="{ row }">
             {{ formatOptionalCurrency(row.singlePeriodLimitAmount) }}
           </template>
@@ -171,7 +171,7 @@
                 size="small"
                 @click="handleDisburse(row)"
               >
-                申请发放
+                援助发放
               </el-button>
             </div>
           </template>
@@ -390,7 +390,7 @@ const getStatusText = (status: string): string => {
     'under_review': '初审存疑',
     'rejected': '审核退回',
     'final_approved': '审核通过',
-    'disbursed': '申请发放'
+    'disbursed': '援助发放'
   }
   return statusMap[status] || '未知状态'
 }
@@ -415,12 +415,7 @@ const getDisplayDisbursementAmount = (application: {
   singlePeriodLimitAmount?: unknown
   totalReimbursementAmount?: unknown
 }): number => {
-  return (
-    toAmountNumber(application.disbursementAmount) ??
-    toAmountNumber(application.singlePeriodLimitAmount) ??
-    toAmountNumber(application.totalReimbursementAmount) ??
-    0
-  )
+  return toAmountNumber(application.disbursementAmount) ?? 0
 }
 
 const formatCurrency = (value: unknown): string => {
@@ -459,7 +454,7 @@ const loadProjectLimitAmounts = async () => {
     projectLimitByName.value = byName
     projectLimitLoaded.value = true
   } catch (error) {
-    console.error('获取项目单期额度失败:', error)
+    console.error('获取项目季度额度失败:', error)
   }
 }
 
@@ -684,7 +679,7 @@ const handleRelatedApplicationChange = async (name: string | number) => {
   }
 }
 
-// 处理申请发放
+// 处理援助发放
 const handleDisburse = async (application: ApplicationListItem | FinanceSummaryRow) => {
   try {
     const summary = application as FinanceSummaryRow
@@ -694,8 +689,12 @@ const handleDisburse = async (application: ApplicationListItem | FinanceSummaryR
       ElMessage.warning('当前汇总记录没有待发放申请')
       return
     }
+    if (payableApplications.some((item) => getDisplayDisbursementAmount(item) <= 0)) {
+      ElMessage.warning('存在未填写发放金额的申请，请返回审核环节补充')
+      return
+    }
     await ElMessageBox.confirm(
-      `确定要将 ${payableApplications.length} 条申请标记为申请发放吗？`,
+      `确定要将 ${payableApplications.length} 条申请标记为援助发放吗？`,
       '确认发放',
       {
         confirmButtonText: '确定',
@@ -711,14 +710,14 @@ const handleDisburse = async (application: ApplicationListItem | FinanceSummaryR
       })
     }
 
-    ElMessage.success('申请发放成功')
+    ElMessage.success('援助发放成功')
     
     // 刷新列表
     fetchSpotCheckApplications()
   } catch (error: any) {
     if (error !== 'cancel') {
-      console.error('申请发放失败:', error)
-      ElMessage.error(error.response?.data?.message || '申请发放失败')
+      console.error('援助发放失败:', error)
+      ElMessage.error(error.response?.data?.message || '援助发放失败')
     }
   }
 }
@@ -829,7 +828,7 @@ const exportAllToExcel = async () => {
     const allApplications = summarizeApplications(response.data as FinanceApplication[])
     
     if (allApplications.length === 0) {
-      ElMessage.warning('没有可导出的审核通过或申请发放数据')
+      ElMessage.warning('没有可导出的审核通过或援助发放数据')
       return
     }
     // 创建工作簿和工作表
@@ -850,7 +849,7 @@ const exportAllToExcel = async () => {
       { header: '就诊地', key: 'treatment', width: 20 },
       { header: '援助项目', key: 'donationProject', width: 15 },
       { header: '项目期数', key: 'donationPeriod', width: 12 },
-      { header: '上限金额', key: 'limitAmount', width: 12 },
+      { header: '季度上限', key: 'limitAmount', width: 12 },
       { header: '申请时间', key: 'applyDate', width: 12 },
       { header: '审核状态', key: 'status', width: 12 },
       { header: '发放金额', key: 'disbursementAmount', width: 12 },
@@ -1110,6 +1109,15 @@ const handleFileChange = async (file: { raw?: File }) => {
         // 验证金额格式
         if (isNaN(parseFloat(rowData.disbursementAmount))) {
           validationErrors.push(`第 ${rowNumber} 行发放金额格式不正确: ${rowData.disbursementAmount}`)
+        }
+        const importedAmount = parseFloat(rowData.disbursementAmount)
+        const importedLimit = parseFloat(rowData.limitAmount)
+        if (
+          Number.isFinite(importedAmount) &&
+          Number.isFinite(importedLimit) &&
+          importedAmount > importedLimit
+        ) {
+          validationErrors.push(`第 ${rowNumber} 行发放金额不能超过季度上限${importedLimit}元`)
         }
         
         // 验证申请总金额格式（如果提供）

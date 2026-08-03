@@ -16,7 +16,7 @@
           <span>住宿票合计 ¥{{ formatAmount(accommodationAmount) }}</span>
         </div>
         <div class="amount-content limit-row">
-          <span class="amount-label">上限金额</span>
+          <span class="amount-label">季度上限</span>
           <span class="amount-value">¥{{ formatAmount(limitAmount) }}</span>
         </div>
         <div class="amount-content disbursement-row">
@@ -236,12 +236,7 @@ watch(
       accommodationInvoiceFiles: (value?.accommodationInvoiceFiles || []).map((item) => ({ ...item })),
       medicalInvoiceFiles: (value?.medicalInvoiceFiles || []).map((item) => ({ ...item })),
     }
-    localDisbursementAmount.value = Number(
-      value?.disbursementAmount ??
-        value?.singlePeriodLimitAmount ??
-        value?.totalReimbursementAmount ??
-        0,
-    )
+    localDisbursementAmount.value = Number(value?.disbursementAmount ?? 0)
     emit('disbursement-amount-change', localDisbursementAmount.value)
   },
   { immediate: true, deep: true },
@@ -411,13 +406,13 @@ const invoiceTags = (
   if (file.recognizedAmount !== undefined && file.recognizedAmount !== null) {
     tags.push({ label: '金额', value: `¥${formatAmount(file.recognizedAmount)}`, type: 'success' })
   } else {
-    tags.push({ label: '金额', value: '识别失败', type: 'danger' })
+    tags.push({ label: '金额', value: '识别失败，请人工核对原图', type: 'danger' })
   }
   if (file.verificationMessage) {
     tags.push({
       label: '核验',
       value: file.verificationMessage,
-      type: file.verificationStatus === 'success' ? 'success' : 'danger',
+      type: file.verificationStatus === 'success' ? 'success' : 'warning',
     })
   }
   return tags

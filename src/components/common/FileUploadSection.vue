@@ -210,12 +210,6 @@ const fileGroups = computed((): FileGroup[] => {
       files: []
     },
     {
-      type: 'medical_invoice',
-      title: '医疗发票及费用清单',
-      description: '医疗收费票据、费用清单等材料',
-      files: []
-    },
-    {
       type: 'hardship_material',
       title: '困难材料',
       description: '低保证或社区、街道办、居委会、村委会出具并盖鲜章的困难证明材料',
@@ -229,8 +223,12 @@ const fileGroups = computed((): FileGroup[] => {
     const fileType = getDisplayFileType(file)
     
     if (fileType) {
-      // 排除交通费发票和住宿费发票，这些将在 invoiceUploadForm 组件中处理
-      if (fileType === 'transport_invoice' || fileType === 'accommodation_invoice') {
+      // 所有发票统一在 InvoiceUploadForm 中展示和核验。
+      if (
+        fileType === 'transport_invoice' ||
+        fileType === 'accommodation_invoice' ||
+        fileType === 'medical_invoice'
+      ) {
         return // 跳过这些文件类型
       }
       const targetGroup = groups.find(g => g.type === fileType)

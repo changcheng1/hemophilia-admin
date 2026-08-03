@@ -127,7 +127,7 @@ const getStatusText = (status: string): string => {
     'under_review': '审核存疑',
     'initial_approved': '初审通过',
     'final_approved': '审核通过',
-    'disbursed': '申请发放',
+    'disbursed': '援助发放',
     'rejected': '审核退回',
     'cancelled': '已取消'
   }

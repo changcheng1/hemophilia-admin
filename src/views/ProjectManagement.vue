@@ -62,7 +62,7 @@
             {{ formatPeriodCount(row) }}
           </template>
         </el-table-column>
-        <el-table-column label="单期额度" min-width="120">
+        <el-table-column label="单季度额度" min-width="120">
           <template #default="{ row }">
             {{ formatAmount(row.singlePeriodLimitAmount) }}
           </template>
@@ -128,13 +128,13 @@
             />
           </div>
         </el-form-item>
-        <el-form-item label="单期额度">
+        <el-form-item label="单季度额度">
           <el-input-number
             v-model="projectForm.singlePeriodLimitAmount"
             :min="0"
             :precision="2"
             :controls="false"
-            placeholder="请输入单期额度"
+            placeholder="请输入单季度额度"
             style="width: 240px"
           />
         </el-form-item>

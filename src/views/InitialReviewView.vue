@@ -770,6 +770,10 @@ const openReviewOpinionDialog = () => {
 // 提交审核意见
 const submitReviewOpinion = async () => {
   if (!selectedApplication.value) return
+  if (reviewResult.value === 'approve' && reviewDisbursementAmount.value <= 0) {
+    ElMessage.warning('初审通过前请填写有效的发放金额')
+    return
+  }
   
   // 初审通过和初审存疑都不要求必填问题记录
   

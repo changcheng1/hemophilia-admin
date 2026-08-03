@@ -173,7 +173,7 @@ const getResultText = (result: string): string => {
     'under_review': '初审存疑',
     'rejected': '审核退回',
     'final_approved': '审核通过',
-    'disbursed': '申请发放'
+    'disbursed': '援助发放'
   }
   return resultMap[result] || result
 }

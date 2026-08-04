@@ -185,7 +185,7 @@
       <div class="dialog-actions">
         <el-button type="primary" @click="openPeriodEdit()">新增期数</el-button>
       </div>
-      <el-table :data="periodForm.periods" border>
+      <el-table :data="periodForm.periods" border style="width: 100%">
         <el-table-column label="期数" min-width="180">
           <template #default="{ row }">
             {{ row.periodName }}

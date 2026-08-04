@@ -10,8 +10,32 @@ import { useNotificationStore } from '@/stores/notification'
 
 const notificationStore = useNotificationStore()
 
+const getErrorText = (error: unknown): string => {
+  if (typeof error === 'string') return error
+  if (error instanceof Error) return error.message
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as { message?: unknown }).message || '')
+  }
+  return ''
+}
+
+// Chromium 在弹窗、表格等组件同步调整尺寸时可能发出该布局警告。
+// 它不代表业务操作失败，不应展示为管理端错误提示。
+const isBenignResizeObserverError = (error: unknown): boolean => {
+  const message = getErrorText(error)
+  return (
+    message.includes('ResizeObserver loop completed with undelivered notifications') ||
+    message.includes('ResizeObserver loop limit exceeded')
+  )
+}
+
 // Global error handler for unhandled promise rejections
 const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+  if (isBenignResizeObserverError(event.reason)) {
+    event.preventDefault()
+    return
+  }
+
   console.error('Unhandled promise rejection:', event.reason)
   
   // Prevent default browser error handling
@@ -27,6 +51,11 @@ const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
 
 // Global error handler for JavaScript errors
 const handleError = (event: ErrorEvent) => {
+  if (isBenignResizeObserverError(event.error || event.message)) {
+    event.preventDefault()
+    return
+  }
+
   console.error('Global JavaScript error:', event.error)
   
   // Handle the error through our notification system
@@ -39,7 +68,9 @@ const handleError = (event: ErrorEvent) => {
 
 // Global error handler for resource loading errors
 const handleResourceError = (event: Event) => {
-  const target = event.target as HTMLElement
+  const target = event.target
+  if (!(target instanceof HTMLElement)) return
+
   console.error('Resource loading error:', target)
   
   // Only show notification for critical resources

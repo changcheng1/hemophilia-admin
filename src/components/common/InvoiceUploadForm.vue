@@ -8,7 +8,7 @@
           <span class="amount-value">¥{{ formatAmount(requestAmount) }}</span>
         </div>
         <div class="amount-content">
-          <span class="amount-label">发票总计</span>
+          <span class="amount-label">发票识别金额小计</span>
           <span class="amount-value">¥{{ formatAmount(totalAmount) }}</span>
         </div>
         <div class="amount-sub">

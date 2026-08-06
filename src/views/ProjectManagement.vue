@@ -314,7 +314,7 @@ import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
 import { projectApi, type Project, type ProjectPeriod, type ProjectProvinceLimit } from '@/api/project'
 import { adminApi, type AdminUser } from '@/api/user'
-import { disableBeforeDatePickerMinDate } from '@/utils/datePicker'
+import { disableBeforeDatePickerMinDate, normalizeBusinessDate } from '@/utils/datePicker'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -402,8 +402,7 @@ const availableProvinceOptions = computed(() => {
 })
 
 const normalizeDate = (value?: string | null) => {
-  if (!value) return ''
-  return String(value).slice(0, 10)
+  return normalizeBusinessDate(value)
 }
 
 const normalizeProject = (project: Project): Project => ({

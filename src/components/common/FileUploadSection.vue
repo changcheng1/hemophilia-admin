@@ -78,42 +78,19 @@
       </div>
     </div>
 
-    <!-- 图片预览对话框 -->
-    <el-dialog
+    <ImagePreviewViewer
       v-model="previewVisible"
-      title="文件预览"
-      width="70%"
-      :before-close="handlePreviewClose"
-      class="preview-dialog"
-    >
-      <div class="preview-container">
-        <img 
-          v-if="currentPreviewUrl" 
-          :src="currentPreviewUrl" 
-          :alt="currentPreviewFile ? getFileName(currentPreviewFile) : ''"
-          class="preview-image" 
-        />
-        <div v-else class="file-preview">
-          <el-icon class="large-file-icon"><Document /></el-icon>
-          <div class="file-details">
-            <h3>{{ currentPreviewFile ? getFileName(currentPreviewFile) : '' }}</h3>
-            <p>文件大小: {{ currentPreviewFile?.size ? formatFileSize(getFileSize(currentPreviewFile)) : '未知' }}</p>
-            <p>文件类型: {{ getFileType(currentPreviewFile ? getFileName(currentPreviewFile) : '') }}</p>
-            <el-button type="primary" @click="downloadFile(currentPreviewFile)">
-              <el-icon><Download /></el-icon>
-              下载文件
-            </el-button>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
+      :url="currentPreviewUrl"
+      @close="handlePreviewClose"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Document, Download, Plus } from '@element-plus/icons-vue'
+import { Document, Plus } from '@element-plus/icons-vue'
 import { normalizeFileUrl } from '@/utils/fileHandler'
+import ImagePreviewViewer from './ImagePreviewViewer.vue'
 
 interface FileItem {
   id?: number
@@ -352,19 +329,6 @@ const isMedicalTextFile = (file: FileItem): boolean => {
     fileType === 'medical_report' ||
     fileType === 'medical_invoice'
   )
-}
-
-// 下载文件
-const downloadFile = (file: FileItem | null) => {
-  if (file?.url) {
-    const link = document.createElement('a')
-    link.href = normalizeFileUrl(file.url)
-    link.download = getFileName(file)
-    link.target = '_blank'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 }
 
 // 图片加载错误处理
@@ -624,49 +588,6 @@ const formatFileSize = (size: number): string => {
     }
   }
 
-  .preview-container {
-    text-align: center;
-
-    .preview-image {
-      max-width: 100%;
-      max-height: 70vh;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .file-preview {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px;
-
-      .large-file-icon {
-        font-size: 80px;
-        color: #c0c4cc;
-        margin-bottom: 20px;
-      }
-
-      .file-details {
-        text-align: center;
-
-        h3 {
-          margin: 0 0 16px 0;
-          color: #303133;
-          font-size: 18px;
-        }
-
-        p {
-          margin: 8px 0;
-          color: #606266;
-          font-size: 14px;
-        }
-
-        .el-button {
-          margin-top: 20px;
-        }
-      }
-    }
-  }
 }
 
 .success-text {
@@ -675,13 +596,6 @@ const formatFileSize = (size: number): string => {
 
 .error-text {
   color: #f56c6c;
-}
-
-// 预览对话框样式
-:deep(.preview-dialog) {
-  .el-dialog__body {
-    padding: 20px;
-  }
 }
 
 // 压缩核验卡片展示

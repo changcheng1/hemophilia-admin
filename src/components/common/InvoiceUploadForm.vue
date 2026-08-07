@@ -126,23 +126,11 @@
         </div>
       </div>
     </div>
-    <!-- 图片预览对话框 -->
-    <el-dialog
+    <ImagePreviewViewer
       v-model="previewVisible"
-      title="发票预览"
-      width="70%"
-      :before-close="handlePreviewClose"
-      class="preview-dialog"
-    >
-      <div class="preview-container">
-        <img 
-          v-if="currentPreviewUrl" 
-          :src="currentPreviewUrl" 
-          :alt="currentPreviewFile?.name || ''"
-          class="preview-image" 
-        />
-      </div>
-    </el-dialog>
+      :url="currentPreviewUrl"
+      @close="handlePreviewClose"
+    />
   </div>
 </template>
 
@@ -152,6 +140,7 @@ import { Document, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { adminApplicationAPI, type InvoiceVerificationResponse } from '@/api/admin-application'
 import { normalizeFileUrl } from '@/utils/fileHandler'
+import ImagePreviewViewer from './ImagePreviewViewer.vue'
 
 interface FileItem {
   name: string
@@ -635,16 +624,6 @@ const formatFileSize = (size: number | undefined): string => {
     }
   }
 
-  .preview-container {
-    text-align: center;
-
-    .preview-image {
-      max-width: 100%;
-      max-height: 70vh;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-  }
 }
 
 .success-text {
@@ -653,13 +632,6 @@ const formatFileSize = (size: number | undefined): string => {
 
 .error-text {
   color: #f56c6c;
-}
-
-// 预览对话框样式
-:deep(.preview-dialog) {
-  .el-dialog__body {
-    padding: 20px;
-  }
 }
 
 // 压缩发票核验卡片展示

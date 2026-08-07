@@ -13,8 +13,8 @@
         <div class="file-header">
           <span class="file-type">{{ getFileTypeLabel(file.fileType) }}</span>
           <div class="file-actions">
-            <el-button 
-              type="primary" 
+            <el-button
+              type="primary"
               size="small" 
               @click="handlePreviewFile(file)"
               :icon="View"
@@ -41,39 +41,37 @@
       </div>
     </div>
 
-    <!-- File Preview Dialog -->
+    <ImagePreviewViewer
+      v-if="isImageFile(previewFile)"
+      v-model="previewVisible"
+      :url="previewUrl"
+      @close="handlePreviewClose"
+    />
+
     <el-dialog
+      v-else
       v-model="previewVisible"
       :title="previewFile?.originalName"
       width="80%"
       center
       @close="handlePreviewClose"
     >
-      <div class="preview-container">
-        <div v-if="isImageFile(previewFile)" class="image-preview">
-          <img 
-            :src="previewUrl" 
-            :alt="previewFile?.originalName"
-            style="max-width: 100%; max-height: 70vh; object-fit: contain;"
-          />
-        </div>
-        <div v-else class="unsupported-preview">
-          <el-result
-            icon="warning"
-            title="无法预览此文件类型"
-            sub-title="请下载文件后使用相应软件打开"
-          >
-            <template #extra>
-              <el-button 
-                type="primary" 
-                @click="handleDownloadFile(previewFile!)"
-                :icon="Download"
-              >
-                下载文件
-              </el-button>
-            </template>
-          </el-result>
-        </div>
+      <div class="unsupported-preview">
+        <el-result
+          icon="warning"
+          title="无法预览此文件类型"
+          sub-title="请下载文件后使用相应软件打开"
+        >
+          <template #extra>
+            <el-button
+              type="primary"
+              @click="handleDownloadFile(previewFile!)"
+              :icon="Download"
+            >
+              下载文件
+            </el-button>
+          </template>
+        </el-result>
       </div>
     </el-dialog>
   </div>
@@ -85,6 +83,7 @@ import { ElMessage } from 'element-plus'
 import { View, Download } from '@element-plus/icons-vue'
 import { useApplicationStore } from '@/stores/application'
 import type { ApplicationFile, FileType } from '@/types/application'
+import ImagePreviewViewer from '@/components/common/ImagePreviewViewer.vue'
 
 interface Props {
   files: ApplicationFile[]
@@ -224,17 +223,6 @@ const handlePreviewClose = () => {
 .no-files {
   text-align: center;
   padding: 40px 0;
-}
-
-.preview-container {
-  text-align: center;
-}
-
-.image-preview {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 300px;
 }
 
 .unsupported-preview {

@@ -124,6 +124,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { getThreeElementVerificationText } from '@/utils/threeElementVerification'
 
 interface FormData {
   // 受捐人信息
@@ -148,6 +149,7 @@ interface FormData {
   bankName?: string
   bankAccountNumber?: string
   threeElementVerified?: boolean | string
+  threeElementRequired?: boolean | string
   threeElementVerifiedAt?: string
   threeElementVerificationStatus?: string
   threeElementVerificationMessage?: string
@@ -171,30 +173,9 @@ const props = defineProps<Props>()
 
 const formData = computed(() => props.modelValue)
 
-const isThreeElementVerified = computed(() => {
-  return formData.value.threeElementVerified === true ||
-    formData.value.threeElementVerified === 'true' ||
-    formData.value.threeElementVerificationStatus === 'success'
-})
-
-const threeElementVerificationText = computed(() => {
-  const status = formData.value.threeElementVerificationStatus
-  const message = formData.value.threeElementVerificationMessage
-
-  if (isThreeElementVerified.value) {
-    return message ? `*三要素验证通过：${message}` : '*三要素验证通过'
-  }
-
-  if (status === 'failed') {
-    return message ? `*三要素验证不通过：${message}` : '*三要素验证不通过'
-  }
-
-  if (status) {
-    return message ? `*三要素验证结果：${message}` : `*三要素验证状态：${status}`
-  }
-
-  return '*暂未完成银行卡三要素验证'
-})
+const threeElementVerificationText = computed(() =>
+  getThreeElementVerificationText(formData.value),
+)
 
 // 检查是否有监护人信息
 const hasGuardianInfo = computed(() => {

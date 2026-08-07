@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { enrollmentAPI, type EnrollmentListItem } from '@/api/enrollment'
 import { normalizeFileUrl } from '@/utils/fileHandler'
+import { getThreeElementVerificationText } from '@/utils/threeElementVerification'
 
 const loading = ref(false)
 const rows = ref<EnrollmentListItem[]>([])
@@ -47,6 +48,11 @@ const detailFiles = computed(() => (current.value?.files || []).map((file: any) 
 const previewImageUrls = computed(() => detailFiles.value
   .filter((file: any) => file.isImage && file.url)
   .map((file: any) => file.url))
+const threeElementVerificationText = computed(() =>
+  current.value
+    ? getThreeElementVerificationText(current.value)
+    : '-',
+)
 
 const load = async () => {
   loading.value = true
@@ -164,6 +170,7 @@ onMounted(load)
             <el-descriptions-item label="银行卡号">{{ current.bankAccountNumber || '-' }}</el-descriptions-item>
             <el-descriptions-item label="开户银行">{{ current.bankName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="开户地区">{{ current.bankLocation || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="三要素验证" :span="2"><span class="verification-result">{{ threeElementVerificationText }}</span></el-descriptions-item>
             <el-descriptions-item label="审核意见" :span="2">{{ current.reviewComment || '-' }}</el-descriptions-item>
           </el-descriptions>
         </section>
@@ -213,6 +220,7 @@ onMounted(load)
 .action-buttons .el-button { margin: 0; }
 .pagination-container { display: flex; justify-content: center; margin-top: 20px; }
 .review-comment { margin-top: 20px; }
+.verification-result { color: #f56c6c; }
 .detail-section + .detail-section { margin-top: 24px; }
 .detail-section h3 { margin: 0 0 12px; font-size: 15px; color: #303133; }
 .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }

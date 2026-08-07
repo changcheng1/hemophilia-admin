@@ -183,7 +183,8 @@ const basicInfo = computed(() => {
       bankAccountName: '',
       bankName: '',
       bankAccountNumber: '',
-      threeElementVerified: false,
+      threeElementRequired: undefined,
+      threeElementVerified: undefined,
       threeElementVerifiedAt: '',
       threeElementVerificationStatus: '',
       threeElementVerificationMessage: '',
@@ -213,7 +214,18 @@ const basicInfo = computed(() => {
     bankAccountName: String(app.bankAccountName || ''),
     bankName: String(app.bankName || ''),
     bankAccountNumber: String(app.bankAccountNumber || ''),
-    threeElementVerified: Boolean(app.threeElementVerified),
+    threeElementRequired:
+      app.threeElementRequired === true || app.threeElementRequired === 'true'
+        ? true
+        : app.threeElementRequired === false || app.threeElementRequired === 'false'
+          ? false
+          : undefined,
+    threeElementVerified:
+      app.threeElementVerified === true || app.threeElementVerified === 'true'
+        ? true
+        : app.threeElementVerified === false || app.threeElementVerified === 'false'
+          ? false
+          : undefined,
     threeElementVerifiedAt: String(app.threeElementVerifiedAt || ''),
     threeElementVerificationStatus: String(app.threeElementVerificationStatus || ''),
     threeElementVerificationMessage: String(app.threeElementVerificationMessage || ''),

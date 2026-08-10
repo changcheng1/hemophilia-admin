@@ -151,7 +151,7 @@ interface FileItem {
   type?: string
   id?: number
   fileType?: string
-  recognizedAmount?: number
+  recognizedAmount?: number | null
   recognizedInvoiceNumber?: string
   recognizedInvoiceDate?: string
   verificationStatus?: string

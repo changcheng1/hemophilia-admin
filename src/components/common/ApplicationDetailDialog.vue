@@ -100,7 +100,7 @@ interface InvoiceFileItem {
   size: number
   fileType: string
   originalName: string
-  recognizedAmount: number
+  recognizedAmount: number | null
   recognizedInvoiceNumber: string
   recognizedInvoiceDate: string
   verificationStatus: string
@@ -249,7 +249,13 @@ const mapInvoiceFiles = (
       size: Number(file.size) || 0,
       fileType: String(file.fileType || ''),
       originalName: String(file.originalName || ''),
-      recognizedAmount: Number((file as Record<string, unknown>).recognizedAmount) || 0,
+      recognizedAmount:
+        (file as Record<string, unknown>).recognizedAmount === null ||
+        (file as Record<string, unknown>).recognizedAmount === undefined
+          ? null
+          : Number.isFinite(Number((file as Record<string, unknown>).recognizedAmount))
+            ? Number((file as Record<string, unknown>).recognizedAmount)
+            : null,
       recognizedInvoiceNumber: String((file as Record<string, unknown>).recognizedInvoiceNumber || ''),
       recognizedInvoiceDate: String((file as Record<string, unknown>).recognizedInvoiceDate || ''),
       verificationStatus: String((file as Record<string, unknown>).verificationStatus || ''),

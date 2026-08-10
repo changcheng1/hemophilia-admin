@@ -152,7 +152,7 @@ export interface ApplicationFileVerificationItem {
   recognizedVisitDate?: string
   recognizedInvoiceNumber?: string
   recognizedInvoiceDate?: string
-  recognizedAmount?: number
+  recognizedAmount?: number | null
   verificationStatus?: string
   verificationMessage?: string
   verificationPayload?: string

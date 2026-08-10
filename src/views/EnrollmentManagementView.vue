@@ -34,6 +34,7 @@ const fileTypeLabel: Record<string, string> = {
 }
 const detailFiles = computed(() => (current.value?.files || []).map((file: any) => {
   const url = normalizeFileUrl(file.url || file.fileUrl || file.path)
+  const thumbnailUrl = normalizeFileUrl(file.thumbnailUrl) || url
   const name = String(file.originalName || file.filename || '未命名材料')
   const mimetype = String(file.mimetype || '')
   const isImage = mimetype.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(name)
@@ -41,6 +42,7 @@ const detailFiles = computed(() => (current.value?.files || []).map((file: any) 
     ...file,
     name,
     url,
+    thumbnailUrl,
     label: fileTypeLabel[file.fileType] || '其他材料',
     isImage,
   }
@@ -183,11 +185,12 @@ onMounted(load)
               <div class="file-label">{{ file.label }}</div>
               <el-image
                 v-if="file.isImage && file.url"
-                :src="file.url"
+                :src="file.thumbnailUrl"
                 :preview-src-list="previewImageUrls"
                 :initial-index="previewImageUrls.indexOf(file.url)"
                 fit="cover"
                 class="file-image"
+                lazy
                 preview-teleported
               >
                 <template #error><div class="file-image-error">图片加载失败</div></template>

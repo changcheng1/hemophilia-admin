@@ -57,6 +57,11 @@
             {{ formatExecutionTime(row) }}
           </template>
         </el-table-column>
+        <el-table-column label="入组时间" min-width="180">
+          <template #default="{ row }">
+            {{ formatEnrollmentTime(row) }}
+          </template>
+        </el-table-column>
         <el-table-column label="项目期数" min-width="120">
           <template #default="{ row }">
             {{ formatPeriodCount(row) }}
@@ -82,7 +87,11 @@
         <el-table-column label="操作" width="430" fixed="right">
           <template #default="{ row }">
             <el-space wrap>
-              <el-button link :type="row.isActive ? 'warning' : 'success'" @click="handleToggleActive(row)">
+              <el-button
+                link
+                :type="row.isActive ? 'warning' : 'success'"
+                @click="handleToggleActive(row)"
+              >
                 {{ row.isActive ? '禁用' : '展示' }}
               </el-button>
               <el-button link type="primary" @click="openProjectDialog(row)">编辑</el-button>
@@ -108,25 +117,6 @@
         </el-form-item>
         <el-form-item label="援助企业">
           <el-input v-model="projectForm.supportCompany" placeholder="请输入援助企业" />
-        </el-form-item>
-        <el-form-item label="执行时间">
-          <div class="date-range-fields">
-            <el-date-picker
-              v-model="projectForm.executionStartDate"
-              type="date"
-              value-format="YYYY-MM-DD"
-              placeholder="开始日期"
-              :disabled-date="disableBeforeDatePickerMinDate"
-            />
-            <span class="date-range-separator">至</span>
-            <el-date-picker
-              v-model="projectForm.executionEndDate"
-              type="date"
-              value-format="YYYY-MM-DD"
-              placeholder="结束日期"
-              :disabled-date="disableBeforeDatePickerMinDate"
-            />
-          </div>
         </el-form-item>
         <el-form-item label="单季度额度">
           <el-input-number
@@ -181,7 +171,11 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="periodDialogVisible" :title="`${currentProjectName || '项目'} - 期数管理`" width="820px">
+    <el-dialog
+      v-model="periodDialogVisible"
+      :title="`${currentProjectName || '项目'} - 期数管理`"
+      width="820px"
+    >
       <div class="dialog-actions">
         <el-button type="primary" @click="openPeriodEdit()">新增期数</el-button>
       </div>
@@ -209,10 +203,18 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="periodEditVisible" :title="periodEditIndex === null ? '新增期数' : '编辑期数'" width="560px">
+    <el-dialog
+      v-model="periodEditVisible"
+      :title="periodEditIndex === null ? '新增期数' : '编辑期数'"
+      width="560px"
+    >
       <el-form label-width="100px">
         <el-form-item label="期数名称" required>
-          <el-input v-model="periodEditForm.periodName" maxlength="50" placeholder="请输入期数名称" />
+          <el-input
+            v-model="periodEditForm.periodName"
+            maxlength="50"
+            placeholder="请输入期数名称"
+          />
         </el-form-item>
         <el-form-item label="时间周期" required>
           <div class="date-range-fields">
@@ -259,7 +261,11 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="provinceEditVisible" :title="provinceEditIndex === null ? '新增省份' : '编辑省份'" width="560px">
+    <el-dialog
+      v-model="provinceEditVisible"
+      :title="provinceEditIndex === null ? '新增省份' : '编辑省份'"
+      width="560px"
+    >
       <el-form label-width="100px">
         <el-form-item label="对应省份">
           <el-select
@@ -269,7 +275,12 @@
             placeholder="请选择省份"
             style="width: 100%"
           >
-            <el-option v-for="item in availableProvinceOptions" :key="item" :label="item" :value="item" />
+            <el-option
+              v-for="item in availableProvinceOptions"
+              :key="item"
+              :label="item"
+              :value="item"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="限制人数">
@@ -282,19 +293,69 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="riskDialogVisible" title="风控管理" width="520px">
-      <el-form label-width="150px">
+    <el-dialog v-model="riskDialogVisible" title="风控管理" width="760px">
+      <el-form label-width="110px">
+        <el-form-item label="执行时间">
+          <div class="date-range-fields">
+            <el-date-picker
+              v-model="riskForm.executionStartDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="开始日期"
+              :disabled-date="disableBeforeDatePickerMinDate"
+            />
+            <span class="date-range-separator">至</span>
+            <el-date-picker
+              v-model="riskForm.executionEndDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="结束日期"
+              :disabled-date="disableBeforeDatePickerMinDate"
+            />
+          </div>
+        </el-form-item>
+        <el-form-item label="入组时间">
+          <div class="date-range-fields">
+            <el-date-picker
+              v-model="riskForm.enrollmentStartDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="开始日期"
+              :disabled-date="disableBeforeDatePickerMinDate"
+            />
+            <span class="date-range-separator">至</span>
+            <el-date-picker
+              v-model="riskForm.enrollmentEndDate"
+              type="date"
+              value-format="YYYY-MM-DD"
+              placeholder="结束日期"
+              :disabled-date="disableBeforeDatePickerMinDate"
+            />
+          </div>
+        </el-form-item>
         <el-form-item label="三要素验证">
           <el-switch v-model="riskForm.isThreeElementEnabled" active-text="开" inactive-text="关" />
         </el-form-item>
         <el-form-item label="户口所在地">
-          <el-switch v-model="riskForm.isHouseholdLocationEnabled" active-text="开" inactive-text="关" />
+          <el-switch
+            v-model="riskForm.isHouseholdLocationEnabled"
+            active-text="开"
+            inactive-text="关"
+          />
         </el-form-item>
         <el-form-item label="医保所在地">
-          <el-switch v-model="riskForm.isMedicalInsuranceLocationEnabled" active-text="开" inactive-text="关" />
+          <el-switch
+            v-model="riskForm.isMedicalInsuranceLocationEnabled"
+            active-text="开"
+            inactive-text="关"
+          />
         </el-form-item>
         <el-form-item label="就诊所在地">
-          <el-switch v-model="riskForm.isTreatmentLocationEnabled" active-text="开" inactive-text="关" />
+          <el-switch
+            v-model="riskForm.isTreatmentLocationEnabled"
+            active-text="开"
+            inactive-text="关"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -312,7 +373,12 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
-import { projectApi, type Project, type ProjectPeriod, type ProjectProvinceLimit } from '@/api/project'
+import {
+  projectApi,
+  type Project,
+  type ProjectPeriod,
+  type ProjectProvinceLimit,
+} from '@/api/project'
 import { adminApi, type AdminUser } from '@/api/user'
 import { disableBeforeDatePickerMinDate, normalizeBusinessDate } from '@/utils/datePicker'
 
@@ -332,14 +398,46 @@ const projectFormRef = ref<FormInstance>()
 const descriptionEditorRef = shallowRef<IDomEditor>()
 const editorKey = ref(0)
 
-const provinceOptions = ['北京市', '天津市', '河北省', '山西省', '辽宁省', '吉林省', '黑龙江省', '上海市', '江苏省', '浙江省', '安徽省', '福建省', '江西省', '山东省', '河南省', '湖北省', '湖南省', '广东省', '海南省', '重庆市', '四川省', '贵州省', '云南省', '陕西省', '甘肃省', '青海省', '内蒙古自治区', '广西壮族自治区', '西藏自治区', '宁夏回族自治区', '新疆维吾尔自治区', '香港特别行政区', '澳门特别行政区']
+const provinceOptions = [
+  '北京市',
+  '天津市',
+  '河北省',
+  '山西省',
+  '辽宁省',
+  '吉林省',
+  '黑龙江省',
+  '上海市',
+  '江苏省',
+  '浙江省',
+  '安徽省',
+  '福建省',
+  '江西省',
+  '山东省',
+  '河南省',
+  '湖北省',
+  '湖南省',
+  '广东省',
+  '海南省',
+  '重庆市',
+  '四川省',
+  '贵州省',
+  '云南省',
+  '陕西省',
+  '甘肃省',
+  '青海省',
+  '内蒙古自治区',
+  '广西壮族自治区',
+  '西藏自治区',
+  '宁夏回族自治区',
+  '新疆维吾尔自治区',
+  '香港特别行政区',
+  '澳门特别行政区',
+]
 
 const projectForm = ref({
   id: null as number | null,
   name: '',
   description: '',
-  executionStartDate: '',
-  executionEndDate: '',
   singlePeriodLimitAmount: null as number | null,
   supportCompany: '',
   responsiblePersonIds: [] as number[],
@@ -375,6 +473,10 @@ const provinceEditForm = ref({
   limitCount: 0,
 })
 const riskForm = ref({
+  executionStartDate: '',
+  executionEndDate: '',
+  enrollmentStartDate: '',
+  enrollmentEndDate: '',
   isThreeElementEnabled: false,
   isHouseholdLocationEnabled: false,
   isMedicalInsuranceLocationEnabled: false,
@@ -383,7 +485,9 @@ const riskForm = ref({
 
 const projectRules: FormRules = {
   name: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
-  responsiblePersonIds: [{ required: true, type: 'array', min: 1, message: '请选择负责人', trigger: 'change' }],
+  responsiblePersonIds: [
+    { required: true, type: 'array', min: 1, message: '请选择负责人', trigger: 'change' },
+  ],
   description: [{ required: true, message: '请输入项目说明', trigger: 'blur' }],
 }
 
@@ -410,6 +514,8 @@ const normalizeProject = (project: Project): Project => ({
   description: sanitizeRichText(project.description || ''),
   executionStartDate: normalizeDate(project.executionStartDate) || null,
   executionEndDate: normalizeDate(project.executionEndDate) || null,
+  enrollmentStartDate: normalizeDate(project.enrollmentStartDate) || null,
+  enrollmentEndDate: normalizeDate(project.enrollmentEndDate) || null,
   projectPeriod: project.projectPeriod || '',
   singlePeriodLimitAmount:
     project.singlePeriodLimitAmount === null || project.singlePeriodLimitAmount === undefined
@@ -418,11 +524,12 @@ const normalizeProject = (project: Project): Project => ({
   periodCount: project.periodCount || project.periods?.length || 0,
   periods: project.periods || [],
   supportCompany: project.supportCompany || '',
-  responsiblePerson: project.responsiblePerson || project.responsiblePersons?.map((item) => item.name).join('、') || '',
+  responsiblePerson:
+    project.responsiblePerson ||
+    project.responsiblePersons?.map((item) => item.name).join('、') ||
+    '',
   responsiblePersonIds:
-    project.responsiblePersonIds ||
-    project.responsiblePersons?.map((item) => item.id) ||
-    [],
+    project.responsiblePersonIds || project.responsiblePersons?.map((item) => item.id) || [],
   responsiblePersons: project.responsiblePersons || [],
   allowedProvinces: project.allowedProvinces || [],
   provinceLimits: project.provinceLimits || [],
@@ -442,7 +549,8 @@ const filteredProjects = computed(() => {
   return projects.value.filter((row) => {
     const nameMatched = !filters.name || row.name.includes(filters.name.trim())
     const timeMatched = isProjectInExecutionRange(row, filters.executionDateRange)
-    const responsibleMatched = !filters.responsiblePersonId ||
+    const responsibleMatched =
+      !filters.responsiblePersonId ||
       row.responsiblePersons?.some((item) => item.id === filters.responsiblePersonId)
     return nameMatched && timeMatched && responsibleMatched
   })
@@ -500,6 +608,11 @@ const formatResponsiblePersons = (row: Project) => {
 const formatExecutionTime = (row: Project) => {
   if (!row.executionStartDate && !row.executionEndDate) return '-'
   return `${normalizeDate(row.executionStartDate) || '-'} 至 ${normalizeDate(row.executionEndDate) || '-'}`
+}
+
+const formatEnrollmentTime = (row: Project) => {
+  if (!row.enrollmentStartDate && !row.enrollmentEndDate) return '-'
+  return `${normalizeDate(row.enrollmentStartDate) || '-'} 至 ${normalizeDate(row.enrollmentEndDate) || '-'}`
 }
 
 const formatAmount = (value?: number | null) => {
@@ -565,9 +678,7 @@ const getResponsiblePersonIds = (row?: Project) => {
     .split(/[、,，]/)
     .map((item) => item.trim())
     .filter(Boolean)
-  return adminOptions.value
-    .filter((admin) => names.includes(admin.name))
-    .map((admin) => admin.id)
+  return adminOptions.value.filter((admin) => names.includes(admin.name)).map((admin) => admin.id)
 }
 
 const mergeProjectDetail = (base?: Project, detail?: Project) => {
@@ -579,30 +690,33 @@ const mergeProjectDetail = (base?: Project, detail?: Project) => {
     ...detail,
     executionStartDate: detail.executionStartDate ?? base.executionStartDate,
     executionEndDate: detail.executionEndDate ?? base.executionEndDate,
+    enrollmentStartDate: detail.enrollmentStartDate ?? base.enrollmentStartDate,
+    enrollmentEndDate: detail.enrollmentEndDate ?? base.enrollmentEndDate,
     projectPeriod: detail.projectPeriod ?? base.projectPeriod,
     singlePeriodLimitAmount: detail.singlePeriodLimitAmount ?? base.singlePeriodLimitAmount,
     periodCount: detail.periodCount ?? base.periodCount,
     periods: detail.periods?.length ? detail.periods : base.periods,
     description: detail.description || base.description,
     responsiblePerson: detail.responsiblePerson || base.responsiblePerson,
-    responsiblePersonIds: detail.responsiblePersonIds?.length ? detail.responsiblePersonIds : base.responsiblePersonIds,
-    responsiblePersons: detail.responsiblePersons?.length ? detail.responsiblePersons : base.responsiblePersons,
+    responsiblePersonIds: detail.responsiblePersonIds?.length
+      ? detail.responsiblePersonIds
+      : base.responsiblePersonIds,
+    responsiblePersons: detail.responsiblePersons?.length
+      ? detail.responsiblePersons
+      : base.responsiblePersons,
   })
 }
 
 const normalizeProjectForm = (row?: Project) => {
   const normalized = row ? normalizeProject(row) : undefined
-  const executionStartDate = normalizeDate(normalized?.executionStartDate)
-  const executionEndDate = normalizeDate(normalized?.executionEndDate)
 
   return {
     id: normalized?.id || null,
     name: normalized?.name || '',
     description: normalized?.description || '',
-    executionStartDate,
-    executionEndDate,
     singlePeriodLimitAmount:
-      normalized?.singlePeriodLimitAmount === null || normalized?.singlePeriodLimitAmount === undefined
+      normalized?.singlePeriodLimitAmount === null ||
+      normalized?.singlePeriodLimitAmount === undefined
         ? null
         : Number(normalized.singlePeriodLimitAmount),
     supportCompany: normalized?.supportCompany || '',
@@ -643,8 +757,6 @@ const saveProject = async () => {
     const data = {
       name: projectForm.value.name,
       description: sanitizeRichText(projectForm.value.description),
-      executionStartDate: projectForm.value.executionStartDate || null,
-      executionEndDate: projectForm.value.executionEndDate || null,
       singlePeriodLimitAmount: projectForm.value.singlePeriodLimitAmount,
       supportCompany: projectForm.value.supportCompany,
       responsiblePersonIds: projectForm.value.responsiblePersonIds,
@@ -782,9 +894,14 @@ const openProvinceDialog = (row: Project) => {
 }
 
 const normalizeProvinceLimitsForForm = (row: Project) => {
-  return (row.provinceLimits?.length
-    ? row.provinceLimits
-    : (row.allowedProvinces || []).map((province) => ({ province, limitCount: 0, registeredCount: 0 }))
+  return (
+    row.provinceLimits?.length
+      ? row.provinceLimits
+      : (row.allowedProvinces || []).map((province) => ({
+          province,
+          limitCount: 0,
+          registeredCount: 0,
+        }))
   ).map((item) => ({ ...item }))
 }
 
@@ -833,10 +950,14 @@ const saveProvinces = async () => {
   if (currentProjectId.value === null) return
   saving.value = true
   try {
-    const response = await projectApi.updateProvinces(currentProjectId.value, provinceForm.value.provinceLimits)
+    const response = await projectApi.updateProvinces(
+      currentProjectId.value,
+      provinceForm.value.provinceLimits,
+    )
     ElMessage.success('省份配置已保存')
     await fetchProjects()
-    const latest = projects.value.find((item) => item.id === currentProjectId.value) || response.data
+    const latest =
+      projects.value.find((item) => item.id === currentProjectId.value) || response.data
     provinceForm.value.provinceLimits = normalizeProvinceLimitsForForm(latest)
   } finally {
     saving.value = false
@@ -846,6 +967,10 @@ const saveProvinces = async () => {
 const openRiskDialog = (row: Project) => {
   currentProjectId.value = row.id
   riskForm.value = {
+    executionStartDate: normalizeBusinessDate(row.executionStartDate),
+    executionEndDate: normalizeBusinessDate(row.executionEndDate),
+    enrollmentStartDate: normalizeBusinessDate(row.enrollmentStartDate),
+    enrollmentEndDate: normalizeBusinessDate(row.enrollmentEndDate),
     isThreeElementEnabled: !!row.isThreeElementEnabled,
     isHouseholdLocationEnabled: !!row.isHouseholdLocationEnabled,
     isMedicalInsuranceLocationEnabled: !!row.isMedicalInsuranceLocationEnabled,
@@ -856,9 +981,34 @@ const openRiskDialog = (row: Project) => {
 
 const saveRiskControl = async () => {
   if (currentProjectId.value === null) return
+  if (
+    riskForm.value.executionStartDate &&
+    riskForm.value.executionEndDate &&
+    riskForm.value.executionStartDate > riskForm.value.executionEndDate
+  ) {
+    ElMessage.warning('执行时间开始日期不能晚于结束日期')
+    return
+  }
+  if (
+    riskForm.value.enrollmentStartDate &&
+    riskForm.value.enrollmentEndDate &&
+    riskForm.value.enrollmentStartDate > riskForm.value.enrollmentEndDate
+  ) {
+    ElMessage.warning('入组时间开始日期不能晚于结束日期')
+    return
+  }
   saving.value = true
   try {
-    await projectApi.updateRiskControl(currentProjectId.value, riskForm.value)
+    await projectApi.updateRiskControl(currentProjectId.value, {
+      executionStartDate: riskForm.value.executionStartDate || null,
+      executionEndDate: riskForm.value.executionEndDate || null,
+      enrollmentStartDate: riskForm.value.enrollmentStartDate || null,
+      enrollmentEndDate: riskForm.value.enrollmentEndDate || null,
+      isThreeElementEnabled: riskForm.value.isThreeElementEnabled,
+      isHouseholdLocationEnabled: riskForm.value.isHouseholdLocationEnabled,
+      isMedicalInsuranceLocationEnabled: riskForm.value.isMedicalInsuranceLocationEnabled,
+      isTreatmentLocationEnabled: riskForm.value.isTreatmentLocationEnabled,
+    })
     ElMessage.success('字段配置已保存')
     riskDialogVisible.value = false
     await fetchProjects()

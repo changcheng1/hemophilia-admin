@@ -6,6 +6,8 @@ export interface Project {
   description: string
   executionStartDate?: string | null
   executionEndDate?: string | null
+  enrollmentStartDate?: string | null
+  enrollmentEndDate?: string | null
   projectPeriod?: string
   singlePeriodLimitAmount?: number | null
   periodCount?: number
@@ -52,6 +54,8 @@ export interface CreateProjectDto {
   description?: string
   executionStartDate?: string | null
   executionEndDate?: string | null
+  enrollmentStartDate?: string | null
+  enrollmentEndDate?: string | null
   projectPeriod?: string
   singlePeriodLimitAmount?: number | null
   supportCompany?: string
@@ -71,6 +75,8 @@ export interface UpdateProjectDto {
   description?: string
   executionStartDate?: string | null
   executionEndDate?: string | null
+  enrollmentStartDate?: string | null
+  enrollmentEndDate?: string | null
   projectPeriod?: string
   singlePeriodLimitAmount?: number | null
   supportCompany?: string
@@ -129,6 +135,10 @@ export const projectApi = {
   updateRiskControl(
     id: number,
     data: {
+      executionStartDate?: string | null
+      executionEndDate?: string | null
+      enrollmentStartDate?: string | null
+      enrollmentEndDate?: string | null
       isThreeElementEnabled?: boolean
       isHouseholdLocationEnabled?: boolean
       isMedicalInsuranceLocationEnabled?: boolean

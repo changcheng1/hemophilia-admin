@@ -36,6 +36,14 @@ export type {
 export { enrollmentAPI } from './enrollment'
 export type { EnrollmentListItem, EnrollmentListResponse, EnrollmentSearchParams } from './enrollment'
 
+// Export review workload API
+export { adminReviewWorkloadAPI } from './admin-review-workload'
+export type {
+  ReviewWorkload,
+  ReviewWorkloadQueryParams,
+  ReviewWorkloadListResponse,
+} from './admin-review-workload'
+
 // Export user and admin APIs
 export { userAPI, adminAPI, userApi, adminApi } from './user'
 export type { UserAPI, AdminAPI } from './user'
@@ -47,6 +55,7 @@ import { dashboardAPI } from './dashboard'
 import { financeAPI } from './finance'
 import { enrollmentAPI } from './enrollment'
 import { userAPI, adminAPI } from './user'
+import { adminReviewWorkloadAPI } from './admin-review-workload'
 
 // Centralized API object for easy access
 export const API = {
@@ -56,7 +65,8 @@ export const API = {
   finance: financeAPI,
   enrollment: enrollmentAPI,
   user: userAPI,
-  admin: adminAPI
+  admin: adminAPI,
+  reviewWorkload: adminReviewWorkloadAPI,
 } as const
 
 // Type for the centralized API object

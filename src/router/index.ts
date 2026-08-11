@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { authGuard, loginRedirectGuard, permissionGuard } from './guards'
+import { authGuard, loginRedirectGuard } from './guards'
 import { UserRole, type UserRole as UserRoleType } from '@/types/auth'
 
 // Define route metadata interface for better type safety
@@ -141,6 +141,16 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
       title: '登录日志'
+    },
+  },
+  {
+    path: '/workload-statistics',
+    name: 'WorkloadStatistics',
+    component: () => import('@/views/WorkloadStatisticsView.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+      title: '工作量统计'
     },
   },
   {

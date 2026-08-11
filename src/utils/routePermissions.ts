@@ -33,6 +33,10 @@ export const ROUTE_PERMISSIONS = {
   AdminManagement: {
     roles: ['admin', 'business_manager'] as UserRole[],
     permissions: ['admin:manage']
+  },
+  WorkloadStatistics: {
+    roles: ['admin', 'business_manager'] as UserRole[],
+    permissions: []
   }
 } as const
 

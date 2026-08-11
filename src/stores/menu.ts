@@ -86,6 +86,14 @@ export const useMenuStore = defineStore('menu', () => {
       roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
     },
     {
+      id: 'workload-statistics',
+      title: '工作量统计',
+      icon: 'Histogram',
+      path: '/workload-statistics',
+      component: 'WorkloadStatistics',
+      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+    },
+    {
       id: 'project-management',
       title: '项目管理',
       icon: 'Folder',

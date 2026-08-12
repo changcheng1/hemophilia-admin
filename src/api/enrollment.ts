@@ -1,6 +1,6 @@
 import { BaseAPIService } from './base'
 
-export type EnrollmentStatus = 'pending_review' | 'approved' | 'rejected'
+export type EnrollmentStatus = 'pending_review' | 'approved' | 'rejected' | 'resubmit_required'
 
 export interface EnrollmentSearchParams {
   donationProject?: string
@@ -48,6 +48,14 @@ class EnrollmentService extends BaseAPIService {
 
   review(id: number, result: 'approve' | 'reject', comment?: string): Promise<any> {
     return this.patch<any>(`/${id}/review`, { result, comment })
+  }
+
+  resetStatus(id: number): Promise<any> {
+    return this.patch<any>(`/${id}/reset-status`)
+  }
+
+  resetStatusByProject(projectId: number): Promise<{ affected: number }> {
+    return this.patch<{ affected: number }>('/reset-status-by-project', { projectId })
   }
 }
 

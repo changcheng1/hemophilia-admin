@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { enrollmentAPI, type EnrollmentListItem } from '@/api/enrollment'
+import { projectApi, type Project } from '@/api/project'
 import { normalizeFileUrl } from '@/utils/fileHandler'
 import { getThreeElementVerificationText } from '@/utils/threeElementVerification'
 
@@ -10,6 +11,11 @@ const rows = ref<EnrollmentListItem[]>([])
 const total = ref(0)
 const detailVisible = ref(false)
 const reviewVisible = ref(false)
+const projectResetVisible = ref(false)
+const resetting = ref(false)
+const projectsLoading = ref(false)
+const projects = ref<Project[]>([])
+const resetProjectId = ref<number | null>(null)
 const current = ref<any>(null)
 const reviewResult = ref<'approve' | 'reject'>('approve')
 const reviewComment = ref('')
@@ -19,10 +25,10 @@ const query = reactive({
 })
 
 const statusLabel: Record<string, string> = {
-  pending_review: '待审核', approved: '审核通过', rejected: '初审驳回',
+  pending_review: '待审核', approved: '审核通过', rejected: '初审驳回', resubmit_required: '待重新提交',
 }
 const statusType: Record<string, 'warning' | 'success' | 'danger'> = {
-  pending_review: 'warning', approved: 'success', rejected: 'danger',
+  pending_review: 'warning', approved: 'success', rejected: 'danger', resubmit_required: 'warning',
 }
 const fileTypeLabel: Record<string, string> = {
   id_card_front: '身份证人像面',
@@ -79,6 +85,52 @@ const reset = () => {
   Object.assign(query, { donationProject: '', phone: '', recipientName: '', idNumber: '', status: '', dateRange: [], page: 1 })
   void load()
 }
+const loadProjects = async () => {
+  if (projects.value.length) return
+  projectsLoading.value = true
+  try {
+    const response = await projectApi.getActive()
+    projects.value = response.data || []
+  } finally {
+    projectsLoading.value = false
+  }
+}
+const showProjectReset = async () => {
+  resetProjectId.value = null
+  projectResetVisible.value = true
+  await loadProjects()
+}
+const resetByProject = async () => {
+  if (!resetProjectId.value) {
+    ElMessage.warning('请选择项目')
+    return
+  }
+  resetting.value = true
+  try {
+    const result = await enrollmentAPI.resetStatusByProject(resetProjectId.value)
+    ElMessage.success(`入组状态重置成功，共重置 ${result.affected || 0} 人`)
+    projectResetVisible.value = false
+    await load()
+  } finally {
+    resetting.value = false
+  }
+}
+const resetEnrollment = async (row: EnrollmentListItem) => {
+  try {
+    await ElMessageBox.confirm(
+      '重置入组状态后，用户需要重新确认并提交入组信息，确认重置？',
+      '重置入组状态',
+      { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' },
+    )
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    throw error
+  }
+
+  await enrollmentAPI.resetStatus(row.id)
+  ElMessage.success('入组状态重置成功')
+  await load()
+}
 const showDetail = async (row: EnrollmentListItem) => {
   current.value = await enrollmentAPI.getDetail(row.id)
   detailVisible.value = true
@@ -125,7 +177,7 @@ onMounted(load)
           <el-col :span="6"><el-form-item label="证件号码"><el-input v-model="query.idNumber" placeholder="请输入" clearable /></el-form-item></el-col>
         </el-row>
         <el-row :gutter="20">
-          <el-col :span="6"><el-form-item label="状态"><el-select v-model="query.status" placeholder="请选择" clearable style="width: 100%"><el-option label="待审核" value="pending_review" /><el-option label="审核通过" value="approved" /><el-option label="初审驳回" value="rejected" /></el-select></el-form-item></el-col>
+          <el-col :span="6"><el-form-item label="状态"><el-select v-model="query.status" placeholder="请选择" clearable style="width: 100%"><el-option label="待审核" value="pending_review" /><el-option label="审核通过" value="approved" /><el-option label="初审驳回" value="rejected" /><el-option label="待重新提交" value="resubmit_required" /></el-select></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="申请日期"><el-date-picker v-model="query.dateRange" type="daterange" value-format="YYYY-MM-DD" range-separator="～" start-placeholder="开始日期" end-placeholder="结束日期" style="width: 100%" /></el-form-item></el-col>
         </el-row>
         <el-row><el-col :span="24" class="search-buttons"><el-button type="primary" @click="query.page = 1; load()">搜索</el-button><el-button @click="reset">重置</el-button></el-col></el-row>
@@ -133,7 +185,7 @@ onMounted(load)
     </el-card>
 
     <el-card class="list-card">
-      <template #header><div class="card-header"><span>入组列表</span></div></template>
+      <template #header><div class="card-header"><span>入组列表</span><el-button type="primary" @click="showProjectReset">重置入组状态</el-button></div></template>
       <el-table :data="rows" v-loading="loading" stripe style="width: 100%" class="enrollment-table">
         <el-table-column prop="donationProject" label="援助项目" min-width="180" show-overflow-tooltip />
         <el-table-column label="手机号" min-width="120"><template #default="{ row }">{{ row.user?.phone || '-' }}</template></el-table-column>
@@ -142,10 +194,27 @@ onMounted(load)
         <el-table-column prop="idNumber" label="证件号码" min-width="180" show-overflow-tooltip />
         <el-table-column label="申请状态" min-width="110"><template #default="{ row }"><el-tag :type="statusType[row.status]">{{ statusLabel[row.status] || row.status }}</el-tag></template></el-table-column>
         <el-table-column label="申请时间" min-width="170"><template #default="{ row }">{{ row.submittedAt || row.createdAt }}</template></el-table-column>
-        <el-table-column label="操作" width="160" fixed="right"><template #default="{ row }"><div class="action-buttons"><el-button type="info" size="small" @click="showDetail(row)">查看</el-button><el-button v-if="row.status === 'pending_review'" type="primary" size="small" @click="showReview(row)">审核</el-button></div></template></el-table-column>
+        <el-table-column label="操作" width="270" fixed="right"><template #default="{ row }"><div class="action-buttons"><el-button type="info" size="small" @click="showDetail(row)">查看</el-button><el-button v-if="row.status === 'pending_review'" type="primary" size="small" @click="showReview(row)">审核</el-button><el-button v-if="row.status === 'approved' || row.status === 'rejected'" type="warning" size="small" @click="resetEnrollment(row)">重置入组状态</el-button></div></template></el-table-column>
       </el-table>
       <div class="pagination-container"><el-pagination v-model:current-page="query.page" v-model:page-size="query.limit" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handlePageSize" @current-change="handlePage" /></div>
     </el-card>
+
+    <el-dialog v-model="projectResetVisible" title="重置入组状态" width="430px">
+      <el-form label-width="64px" @submit.prevent>
+        <el-form-item label="项目" required>
+          <el-select
+            v-model="resetProjectId"
+            placeholder="请选择"
+            filterable
+            :loading="projectsLoading"
+            style="width: 100%"
+          >
+            <el-option v-for="project in projects" :key="project.id" :label="project.name" :value="project.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer><el-button :disabled="resetting" @click="projectResetVisible = false">取消</el-button><el-button type="primary" :loading="resetting" @click="resetByProject">确认</el-button></template>
+    </el-dialog>
 
     <el-dialog v-model="detailVisible" title="入组资料详情" width="900px" class="enrollment-detail-dialog">
       <div v-if="current" class="enrollment-detail">

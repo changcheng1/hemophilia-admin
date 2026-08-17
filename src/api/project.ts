@@ -8,6 +8,7 @@ export interface Project {
   executionEndDate?: string | null
   enrollmentStartDate?: string | null
   enrollmentEndDate?: string | null
+  projectNotice?: string | null
   projectPeriod?: string
   singlePeriodLimitAmount?: number | null
   periodCount?: number
@@ -56,6 +57,7 @@ export interface CreateProjectDto {
   executionEndDate?: string | null
   enrollmentStartDate?: string | null
   enrollmentEndDate?: string | null
+  projectNotice?: string | null
   projectPeriod?: string
   singlePeriodLimitAmount?: number | null
   supportCompany?: string
@@ -77,6 +79,7 @@ export interface UpdateProjectDto {
   executionEndDate?: string | null
   enrollmentStartDate?: string | null
   enrollmentEndDate?: string | null
+  projectNotice?: string | null
   projectPeriod?: string
   singlePeriodLimitAmount?: number | null
   supportCompany?: string
@@ -139,6 +142,7 @@ export const projectApi = {
       executionEndDate?: string | null
       enrollmentStartDate?: string | null
       enrollmentEndDate?: string | null
+      projectNotice?: string | null
       isThreeElementEnabled?: boolean
       isHouseholdLocationEnabled?: boolean
       isMedicalInsuranceLocationEnabled?: boolean

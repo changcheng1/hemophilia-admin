@@ -164,6 +164,26 @@
             />
           </div>
         </el-form-item>
+        <el-form-item label="项目通知">
+          <div v-if="projectDialogVisible" class="rich-editor-wrap">
+            <Toolbar
+              :key="`toolbar-${projectNoticeEditorKey}`"
+              :editor="projectNoticeEditorRef"
+              :default-config="toolbarConfig"
+              mode="default"
+              class="rich-toolbar"
+            />
+            <Editor
+              :key="`editor-${projectNoticeEditorKey}`"
+              v-model="projectForm.projectNotice"
+              :default-config="projectNoticeEditorConfig"
+              mode="default"
+              class="rich-content"
+              @on-created="handleProjectNoticeEditorCreated"
+              @on-blur="syncProjectNoticeFromEditor"
+            />
+          </div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="projectDialogVisible = false">取消</el-button>
@@ -293,7 +313,12 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="riskDialogVisible" title="风控管理" width="760px">
+    <el-dialog
+      v-model="riskDialogVisible"
+      title="风控管理"
+      width="760px"
+      @closed="handleRiskDialogClosed"
+    >
       <el-form label-width="110px">
         <el-form-item label="执行时间">
           <div class="date-range-fields">
@@ -330,6 +355,26 @@
               value-format="YYYY-MM-DD"
               placeholder="结束日期"
               :disabled-date="disableBeforeDatePickerMinDate"
+            />
+          </div>
+        </el-form-item>
+        <el-form-item label="项目通知">
+          <div v-if="riskDialogVisible" class="rich-editor-wrap">
+            <Toolbar
+              :key="`toolbar-${riskNoticeEditorKey}`"
+              :editor="riskNoticeEditorRef"
+              :default-config="toolbarConfig"
+              mode="default"
+              class="rich-toolbar"
+            />
+            <Editor
+              :key="`editor-${riskNoticeEditorKey}`"
+              v-model="riskForm.projectNotice"
+              :default-config="riskNoticeEditorConfig"
+              mode="default"
+              class="rich-content"
+              @on-created="handleRiskNoticeEditorCreated"
+              @on-blur="syncRiskNoticeFromEditor"
             />
           </div>
         </el-form-item>
@@ -397,6 +442,10 @@ const riskDialogVisible = ref(false)
 const projectFormRef = ref<FormInstance>()
 const descriptionEditorRef = shallowRef<IDomEditor>()
 const editorKey = ref(0)
+const projectNoticeEditorRef = shallowRef<IDomEditor>()
+const projectNoticeEditorKey = ref(0)
+const riskNoticeEditorRef = shallowRef<IDomEditor>()
+const riskNoticeEditorKey = ref(0)
 
 const provinceOptions = [
   '北京市',
@@ -438,6 +487,7 @@ const projectForm = ref({
   id: null as number | null,
   name: '',
   description: '',
+  projectNotice: '',
   singlePeriodLimitAmount: null as number | null,
   supportCompany: '',
   responsiblePersonIds: [] as number[],
@@ -477,6 +527,7 @@ const riskForm = ref({
   executionEndDate: '',
   enrollmentStartDate: '',
   enrollmentEndDate: '',
+  projectNotice: '',
   isThreeElementEnabled: false,
   isHouseholdLocationEnabled: false,
   isMedicalInsuranceLocationEnabled: false,
@@ -497,6 +548,12 @@ const toolbarConfig: Partial<IToolbarConfig> = {
 const editorConfig: Partial<IEditorConfig> = {
   placeholder: '请输入将在用户端项目页面展示的项目说明',
 }
+const projectNoticeEditorConfig: Partial<IEditorConfig> = {
+  placeholder: '请输入将在用户端项目通知页展示的项目通知',
+}
+const riskNoticeEditorConfig: Partial<IEditorConfig> = {
+  placeholder: '请输入将在用户端项目通知页展示的项目通知',
+}
 
 const availableProvinceOptions = computed(() => {
   const selected = provinceForm.value.provinceLimits
@@ -516,6 +573,7 @@ const normalizeProject = (project: Project): Project => ({
   executionEndDate: normalizeDate(project.executionEndDate) || null,
   enrollmentStartDate: normalizeDate(project.enrollmentStartDate) || null,
   enrollmentEndDate: normalizeDate(project.enrollmentEndDate) || null,
+  projectNotice: normalizeOptionalRichText(project.projectNotice),
   projectPeriod: project.projectPeriod || '',
   singlePeriodLimitAmount:
     project.singlePeriodLimitAmount === null || project.singlePeriodLimitAmount === undefined
@@ -648,6 +706,13 @@ const sanitizeRichText = (html: string) => {
   return doc.body.innerHTML.trim()
 }
 
+const normalizeOptionalRichText = (value?: string | null) => {
+  const sanitized = sanitizeRichText(value || '')
+  if (!sanitized) return null
+  const doc = new DOMParser().parseFromString(sanitized, 'text/html')
+  return doc.body.textContent?.trim() ? sanitized : null
+}
+
 const syncDescriptionFromEditor = () => {
   projectForm.value.description = sanitizeRichText(projectForm.value.description)
 }
@@ -664,6 +729,44 @@ const handleEditorCreated = (editor: IDomEditor) => {
   descriptionEditorRef.value = editor
   nextTick(() => {
     editor.setHtml(projectForm.value.description || '')
+  })
+}
+
+const syncProjectNoticeFromEditor = () => {
+  projectForm.value.projectNotice = sanitizeRichText(projectForm.value.projectNotice)
+}
+
+const destroyProjectNoticeEditor = () => {
+  projectNoticeEditorRef.value?.destroy()
+  projectNoticeEditorRef.value = undefined
+}
+
+const handleProjectNoticeEditorCreated = (editor: IDomEditor) => {
+  if (projectNoticeEditorRef.value && projectNoticeEditorRef.value !== editor) {
+    projectNoticeEditorRef.value.destroy()
+  }
+  projectNoticeEditorRef.value = editor
+  nextTick(() => {
+    editor.setHtml(projectForm.value.projectNotice || '')
+  })
+}
+
+const syncRiskNoticeFromEditor = () => {
+  riskForm.value.projectNotice = sanitizeRichText(riskForm.value.projectNotice)
+}
+
+const destroyRiskNoticeEditor = () => {
+  riskNoticeEditorRef.value?.destroy()
+  riskNoticeEditorRef.value = undefined
+}
+
+const handleRiskNoticeEditorCreated = (editor: IDomEditor) => {
+  if (riskNoticeEditorRef.value && riskNoticeEditorRef.value !== editor) {
+    riskNoticeEditorRef.value.destroy()
+  }
+  riskNoticeEditorRef.value = editor
+  nextTick(() => {
+    editor.setHtml(riskForm.value.projectNotice || '')
   })
 }
 
@@ -692,6 +795,7 @@ const mergeProjectDetail = (base?: Project, detail?: Project) => {
     executionEndDate: detail.executionEndDate ?? base.executionEndDate,
     enrollmentStartDate: detail.enrollmentStartDate ?? base.enrollmentStartDate,
     enrollmentEndDate: detail.enrollmentEndDate ?? base.enrollmentEndDate,
+    projectNotice: detail.projectNotice ?? base.projectNotice,
     projectPeriod: detail.projectPeriod ?? base.projectPeriod,
     singlePeriodLimitAmount: detail.singlePeriodLimitAmount ?? base.singlePeriodLimitAmount,
     periodCount: detail.periodCount ?? base.periodCount,
@@ -714,6 +818,7 @@ const normalizeProjectForm = (row?: Project) => {
     id: normalized?.id || null,
     name: normalized?.name || '',
     description: normalized?.description || '',
+    projectNotice: normalized?.projectNotice || '',
     singlePeriodLimitAmount:
       normalized?.singlePeriodLimitAmount === null ||
       normalized?.singlePeriodLimitAmount === undefined
@@ -726,6 +831,7 @@ const normalizeProjectForm = (row?: Project) => {
 
 const openProjectDialog = async (row?: Project) => {
   destroyDescriptionEditor()
+  destroyProjectNoticeEditor()
   await ensureAdminsLoaded()
   let detail = row
   if (row?.id) {
@@ -740,12 +846,14 @@ const openProjectDialog = async (row?: Project) => {
     ...normalizeProjectForm(detail),
   }
   editorKey.value += 1
+  projectNoticeEditorKey.value += 1
   projectFormRef.value?.clearValidate()
   projectDialogVisible.value = true
 }
 
 const handleProjectDialogClosed = () => {
   destroyDescriptionEditor()
+  destroyProjectNoticeEditor()
 }
 
 const saveProject = async () => {
@@ -757,6 +865,7 @@ const saveProject = async () => {
     const data = {
       name: projectForm.value.name,
       description: sanitizeRichText(projectForm.value.description),
+      projectNotice: normalizeOptionalRichText(projectForm.value.projectNotice),
       singlePeriodLimitAmount: projectForm.value.singlePeriodLimitAmount,
       supportCompany: projectForm.value.supportCompany,
       responsiblePersonIds: projectForm.value.responsiblePersonIds,
@@ -965,18 +1074,25 @@ const saveProvinces = async () => {
 }
 
 const openRiskDialog = (row: Project) => {
+  destroyRiskNoticeEditor()
   currentProjectId.value = row.id
   riskForm.value = {
     executionStartDate: normalizeBusinessDate(row.executionStartDate),
     executionEndDate: normalizeBusinessDate(row.executionEndDate),
     enrollmentStartDate: normalizeBusinessDate(row.enrollmentStartDate),
     enrollmentEndDate: normalizeBusinessDate(row.enrollmentEndDate),
+    projectNotice: normalizeOptionalRichText(row.projectNotice) || '',
     isThreeElementEnabled: !!row.isThreeElementEnabled,
     isHouseholdLocationEnabled: !!row.isHouseholdLocationEnabled,
     isMedicalInsuranceLocationEnabled: !!row.isMedicalInsuranceLocationEnabled,
     isTreatmentLocationEnabled: !!row.isTreatmentLocationEnabled,
   }
+  riskNoticeEditorKey.value += 1
   riskDialogVisible.value = true
+}
+
+const handleRiskDialogClosed = () => {
+  destroyRiskNoticeEditor()
 }
 
 const saveRiskControl = async () => {
@@ -1004,6 +1120,7 @@ const saveRiskControl = async () => {
       executionEndDate: riskForm.value.executionEndDate || null,
       enrollmentStartDate: riskForm.value.enrollmentStartDate || null,
       enrollmentEndDate: riskForm.value.enrollmentEndDate || null,
+      projectNotice: normalizeOptionalRichText(riskForm.value.projectNotice),
       isThreeElementEnabled: riskForm.value.isThreeElementEnabled,
       isHouseholdLocationEnabled: riskForm.value.isHouseholdLocationEnabled,
       isMedicalInsuranceLocationEnabled: riskForm.value.isMedicalInsuranceLocationEnabled,
@@ -1024,6 +1141,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   destroyDescriptionEditor()
+  destroyProjectNoticeEditor()
+  destroyRiskNoticeEditor()
 })
 </script>
 

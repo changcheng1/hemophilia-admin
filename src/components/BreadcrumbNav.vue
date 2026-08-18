@@ -1,7 +1,7 @@
 <template>
   <el-breadcrumb separator="/" class="breadcrumb-nav">
-    <el-breadcrumb-item 
-      v-for="(item, index) in breadcrumbItems" 
+    <el-breadcrumb-item
+      v-for="(item, index) in breadcrumbItems"
       :key="index"
       :to="item.path && index < breadcrumbItems.length - 1 ? { path: item.path } : undefined"
     >
@@ -17,7 +17,8 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMenuStore } from '@/stores/menu'
-// Remove unused import
+import { useAuthStore } from '@/stores/auth'
+import { UserRole } from '@/types/auth'
 
 interface BreadcrumbItem {
   title: string
@@ -27,28 +28,28 @@ interface BreadcrumbItem {
 
 const route = useRoute()
 const menuStore = useMenuStore()
+const authStore = useAuthStore()
 
 const breadcrumbItems = computed((): BreadcrumbItem[] => {
   const items: BreadcrumbItem[] = []
-  
-  // Always start with home
-  items.push({
-    title: '首页',
-    path: '/dashboard',
-    icon: 'House'
-  })
-  
-  // Add current page if it's not the dashboard
-  if (route.path !== '/dashboard') {
-    const currentMenuItem = menuStore.userMenuItems.find(item => item.path === route.path)
+
+  const rootItem: BreadcrumbItem =
+    authStore.userRole === UserRole.BUSINESS_MANAGER
+      ? { title: '抽查管理', path: '/spot-check', icon: 'Search' }
+      : { title: '首页', path: '/dashboard', icon: 'House' }
+
+  items.push(rootItem)
+
+  if (route.path !== rootItem.path) {
+    const currentMenuItem = menuStore.userMenuItems.find((item) => item.path === route.path)
     const pageTitle = (route.meta?.title as string) || currentMenuItem?.title || '页面'
-    
+
     items.push({
       title: pageTitle,
-      path: route.path
+      path: route.path,
     })
   }
-  
+
   return items
 })
 </script>

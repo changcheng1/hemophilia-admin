@@ -1,6 +1,7 @@
 import type { NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { UserRole } from '@/types/auth'
+import { getDefaultRouteForRole } from '@/utils/routePermissions'
 
 /**
  * Permission verification middleware
@@ -25,9 +26,8 @@ export class PermissionGuard {
   /**
    * Get redirect path based on user role when access is denied
    */
-  static getRedirectPath(_userRole?: UserRole): string {
-    // Always redirect to dashboard for authenticated users without proper role
-    return '/dashboard'
+  static getRedirectPath(userRole?: UserRole): string {
+    return userRole ? getDefaultRouteForRole(userRole) : '/dashboard'
   }
 }
 
@@ -37,7 +37,7 @@ export class PermissionGuard {
 export const authGuard = async (
   to: RouteLocationNormalized,
   from: RouteLocationNormalized,
-  next: NavigationGuardNext
+  next: NavigationGuardNext,
 ): Promise<void> => {
   const authStore = useAuthStore()
 
@@ -78,7 +78,7 @@ export const authGuard = async (
 export const roleAndPermissionGuard = (
   to: RouteLocationNormalized,
   from: RouteLocationNormalized,
-  next: NavigationGuardNext
+  next: NavigationGuardNext,
 ): void => {
   const authStore = useAuthStore()
 
@@ -86,7 +86,7 @@ export const roleAndPermissionGuard = (
   if (to.meta.roles && Array.isArray(to.meta.roles)) {
     const hasRequiredRole = PermissionGuard.checkRole(
       to.meta.roles as UserRole[],
-      authStore.userRole
+      authStore.userRole,
     )
 
     if (!hasRequiredRole) {
@@ -99,13 +99,12 @@ export const roleAndPermissionGuard = (
 
   // Check permission requirements
   if (to.meta.permissions && Array.isArray(to.meta.permissions)) {
-    const hasAllPermissions = (to.meta.permissions as string[]).every(permission =>
-      PermissionGuard.checkPermission(permission, authStore.permissions)
+    const hasAllPermissions = (to.meta.permissions as string[]).every((permission) =>
+      PermissionGuard.checkPermission(permission, authStore.permissions),
     )
 
     if (!hasAllPermissions) {
-      // User doesn't have required permissions, redirect to dashboard
-      next('/dashboard')
+      next(PermissionGuard.getRedirectPath(authStore.userRole))
       return
     }
   }
@@ -120,7 +119,7 @@ export const roleAndPermissionGuard = (
 export const roleGuard = (
   to: RouteLocationNormalized,
   from: RouteLocationNormalized,
-  next: NavigationGuardNext
+  next: NavigationGuardNext,
 ): void => {
   const authStore = useAuthStore()
 
@@ -131,10 +130,7 @@ export const roleGuard = (
   }
 
   // Check if user has required role
-  const hasRequiredRole = PermissionGuard.checkRole(
-    to.meta.roles as UserRole[],
-    authStore.userRole
-  )
+  const hasRequiredRole = PermissionGuard.checkRole(to.meta.roles as UserRole[], authStore.userRole)
 
   if (!hasRequiredRole) {
     // User doesn't have required role, redirect to appropriate page
@@ -152,7 +148,7 @@ export const roleGuard = (
 export const permissionGuard = (
   to: RouteLocationNormalized,
   from: RouteLocationNormalized,
-  next: NavigationGuardNext
+  next: NavigationGuardNext,
 ): void => {
   const authStore = useAuthStore()
 
@@ -163,13 +159,12 @@ export const permissionGuard = (
   }
 
   // Check if user has all required permissions
-  const hasAllPermissions = (to.meta.permissions as string[]).every(permission =>
-    PermissionGuard.checkPermission(permission, authStore.permissions)
+  const hasAllPermissions = (to.meta.permissions as string[]).every((permission) =>
+    PermissionGuard.checkPermission(permission, authStore.permissions),
   )
 
   if (!hasAllPermissions) {
-    // User doesn't have required permissions, redirect to dashboard
-    next('/dashboard')
+    next(PermissionGuard.getRedirectPath(authStore.userRole))
     return
   }
 
@@ -182,13 +177,13 @@ export const permissionGuard = (
 export const loginRedirectGuard = (
   to: RouteLocationNormalized,
   from: RouteLocationNormalized,
-  next: NavigationGuardNext
+  next: NavigationGuardNext,
 ): void => {
   const authStore = useAuthStore()
 
-  // If user is authenticated and trying to access login or forgot password, redirect to dashboard
+  // Redirect authenticated users to the first route available to their role.
   if ((to.name === 'Login' || to.name === 'ForgotPassword') && authStore.isAuthenticated) {
-    next('/dashboard')
+    next(PermissionGuard.getRedirectPath(authStore.userRole))
     return
   }
 

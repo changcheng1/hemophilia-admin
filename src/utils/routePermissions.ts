@@ -7,37 +7,37 @@ import type { UserRole } from '@/types/auth'
  */
 export const ROUTE_PERMISSIONS = {
   Dashboard: {
-    roles: ['admin', 'business_manager', 'initial_reviewer', 'final_reviewer', 'finance_manager'] as UserRole[],
-    permissions: []
+    roles: ['admin', 'initial_reviewer', 'final_reviewer', 'finance_manager'] as UserRole[],
+    permissions: [],
   },
   InitialReview: {
-    roles: ['admin', 'business_manager', 'initial_reviewer'] as UserRole[],
-    permissions: ['application:review']
+    roles: ['admin', 'initial_reviewer'] as UserRole[],
+    permissions: ['application:review'],
   },
   FinalReview: {
-    roles: ['admin', 'business_manager', 'final_reviewer'] as UserRole[],
-    permissions: ['application:final_review']
+    roles: ['admin', 'final_reviewer'] as UserRole[],
+    permissions: ['application:final_review'],
   },
   SpotCheck: {
     roles: ['admin', 'business_manager'] as UserRole[],
-    permissions: ['application:spot_check']
+    permissions: ['application:spot_check'],
   },
   Finance: {
-    roles: ['admin', 'business_manager', 'finance_manager'] as UserRole[],
-    permissions: ['finance:manage']
+    roles: ['admin', 'finance_manager'] as UserRole[],
+    permissions: ['finance:manage'],
   },
   UserManagement: {
     roles: ['admin'] as UserRole[],
-    permissions: ['user:manage']
+    permissions: ['user:manage'],
   },
   AdminManagement: {
-    roles: ['admin', 'business_manager'] as UserRole[],
-    permissions: ['admin:manage']
+    roles: ['admin'] as UserRole[],
+    permissions: ['admin:manage'],
   },
   WorkloadStatistics: {
-    roles: ['admin', 'business_manager'] as UserRole[],
-    permissions: []
-  }
+    roles: ['admin'] as UserRole[],
+    permissions: [],
+  },
 } as const
 
 /**
@@ -60,8 +60,9 @@ export function routeRequiresAuth(route: RouteLocationNormalized): boolean {
 export function getDefaultRouteForRole(role: UserRole): string {
   switch (role) {
     case 'admin':
-    case 'business_manager':
       return '/dashboard'
+    case 'business_manager':
+      return '/spot-check'
     case 'initial_reviewer':
       return '/initial-review'
     case 'final_reviewer':
@@ -78,13 +79,13 @@ export function getDefaultRouteForRole(role: UserRole): string {
  */
 export function getAccessibleRoutesForRole(role: UserRole): string[] {
   const accessibleRoutes: string[] = []
-  
+
   Object.entries(ROUTE_PERMISSIONS).forEach(([routeName, config]) => {
     if (config.roles.includes(role)) {
       accessibleRoutes.push(routeName)
     }
   })
-  
+
   return accessibleRoutes
 }
 
@@ -94,7 +95,7 @@ export function getAccessibleRoutesForRole(role: UserRole): string[] {
 export function validateRouteAccess(
   routeName: string,
   userRole: UserRole,
-  userPermissions: string[]
+  userPermissions: string[],
 ): boolean {
   const routeConfig = getRoutePermissions(routeName)
   if (!routeConfig) return true // Allow access if no specific config
@@ -106,8 +107,8 @@ export function validateRouteAccess(
 
   // Check permission requirement
   if (routeConfig.permissions.length > 0) {
-    const hasAllPermissions = routeConfig.permissions.every(
-      permission => userPermissions.includes(permission)
+    const hasAllPermissions = routeConfig.permissions.every((permission) =>
+      userPermissions.includes(permission),
     )
     if (!hasAllPermissions) {
       return false

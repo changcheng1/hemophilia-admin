@@ -42,19 +42,13 @@ export function usePermissions() {
 
   // Common permission checks for different modules
   const canManageUsers = computed(() => hasRole(UserRole.ADMIN))
-  const canManageAdmins = computed(() => hasAnyRole([UserRole.ADMIN, UserRole.BUSINESS_MANAGER]))
-  const canReviewApplications = computed(() => 
-    hasAnyRole([UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.INITIAL_REVIEWER])
+  const canManageAdmins = computed(() => hasRole(UserRole.ADMIN))
+  const canReviewApplications = computed(() =>
+    hasAnyRole([UserRole.ADMIN, UserRole.INITIAL_REVIEWER]),
   )
-  const canFinalReview = computed(() => 
-    hasAnyRole([UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.FINAL_REVIEWER])
-  )
-  const canManageFinance = computed(() => 
-    hasAnyRole([UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.FINANCE_MANAGER])
-  )
-  const canSpotCheck = computed(() => 
-    hasAnyRole([UserRole.ADMIN, UserRole.BUSINESS_MANAGER])
-  )
+  const canFinalReview = computed(() => hasAnyRole([UserRole.ADMIN, UserRole.FINAL_REVIEWER]))
+  const canManageFinance = computed(() => hasAnyRole([UserRole.ADMIN, UserRole.FINANCE_MANAGER]))
+  const canSpotCheck = computed(() => hasAnyRole([UserRole.ADMIN, UserRole.BUSINESS_MANAGER]))
 
   return {
     // Role checks

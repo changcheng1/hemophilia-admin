@@ -18,18 +18,18 @@ const routes: RouteRecordRaw[] = [
     path: '/login',
     name: 'Login',
     component: () => import('@/views/LoginView.vue'),
-    meta: { 
+    meta: {
       requiresAuth: false,
-      title: '登录'
+      title: '登录',
     },
   },
   {
     path: '/forgot-password',
     name: 'ForgotPassword',
     component: () => import('@/views/ForgotPasswordView.vue'),
-    meta: { 
+    meta: {
       requiresAuth: false,
-      title: '忘记密码'
+      title: '忘记密码',
     },
   },
   {
@@ -42,8 +42,13 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/DashboardView.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.INITIAL_REVIEWER, UserRole.FINAL_REVIEWER, UserRole.FINANCE_MANAGER],
-      title: '平台概况'
+      roles: [
+        UserRole.ADMIN,
+        UserRole.INITIAL_REVIEWER,
+        UserRole.FINAL_REVIEWER,
+        UserRole.FINANCE_MANAGER,
+      ],
+      title: '平台概况',
     },
   },
   {
@@ -52,9 +57,9 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/InitialReviewView.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.INITIAL_REVIEWER],
+      roles: [UserRole.ADMIN, UserRole.INITIAL_REVIEWER],
       permissions: ['application:review'],
-      title: '初审管理'
+      title: '初审管理',
     },
   },
   {
@@ -63,8 +68,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/EnrollmentManagementView.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.INITIAL_REVIEWER],
-      title: '入组管理'
+      roles: [UserRole.ADMIN, UserRole.INITIAL_REVIEWER],
+      title: '入组管理',
     },
   },
   {
@@ -73,9 +78,14 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/ApplicationDetailView.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.INITIAL_REVIEWER, UserRole.FINAL_REVIEWER, UserRole.FINANCE_MANAGER],
+      roles: [
+        UserRole.ADMIN,
+        UserRole.INITIAL_REVIEWER,
+        UserRole.FINAL_REVIEWER,
+        UserRole.FINANCE_MANAGER,
+      ],
       permissions: ['application:view'],
-      title: '申请详情'
+      title: '申请详情',
     },
   },
   {
@@ -84,9 +94,9 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/FinalReviewView.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.FINAL_REVIEWER],
+      roles: [UserRole.ADMIN, UserRole.FINAL_REVIEWER],
       permissions: ['application:final_review'],
-      title: '复核管理'
+      title: '复核管理',
     },
   },
   {
@@ -97,7 +107,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
       permissions: ['application:spot_check'],
-      title: '抽查管理'
+      title: '抽查管理',
     },
   },
   {
@@ -106,9 +116,9 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/FinanceView.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.FINANCE_MANAGER],
+      roles: [UserRole.ADMIN, UserRole.FINANCE_MANAGER],
       permissions: ['finance:manage'],
-      title: '财务管理'
+      title: '财务管理',
     },
   },
   {
@@ -119,7 +129,7 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       roles: [UserRole.ADMIN],
       permissions: ['user:manage'],
-      title: '用户管理'
+      title: '用户管理',
     },
   },
   {
@@ -128,9 +138,9 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/AdminManagementView.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+      roles: [UserRole.ADMIN],
       permissions: ['admin:manage'],
-      title: '管理员管理'
+      title: '管理员管理',
     },
   },
   {
@@ -139,8 +149,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/LoginLogView.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
-      title: '登录日志'
+      roles: [UserRole.ADMIN],
+      title: '登录日志',
     },
   },
   {
@@ -149,8 +159,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/WorkloadStatisticsView.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
-      title: '工作量统计'
+      roles: [UserRole.ADMIN],
+      title: '工作量统计',
     },
   },
   {
@@ -159,9 +169,9 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/ProjectManagement.vue'),
     meta: {
       requiresAuth: true,
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+      roles: [UserRole.ADMIN],
       permissions: ['project:manage'],
-      title: '项目管理'
+      title: '项目管理',
     },
   },
   {
@@ -170,26 +180,30 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/UnauthorizedView.vue'),
     meta: {
       requiresAuth: false,
-      title: '无权限访问'
+      title: '无权限访问',
     },
   },
   // 开发环境API测试页面
-  ...(import.meta.env.DEV ? [{
-    path: '/api-test',
-    name: 'ApiTest',
-    component: () => import('@/views/ApiTestView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: 'API测试'
-    },
-  }] : []),
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: '/api-test',
+          name: 'ApiTest',
+          component: () => import('@/views/ApiTestView.vue'),
+          meta: {
+            requiresAuth: false,
+            title: 'API测试',
+          },
+        },
+      ]
+    : []),
   {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/NotFoundView.vue'),
     meta: {
       requiresAuth: false,
-      title: '页面不存在'
+      title: '页面不存在',
     },
   },
 ]
@@ -212,11 +226,11 @@ router.beforeEach(async (to, from, next) => {
     await authGuard(to, from, next)
   } catch (error) {
     console.error('Router guard error:', error)
-    
+
     // Import notification store dynamically to avoid circular dependencies
     const { useNotificationStore } = await import('@/stores/notification')
     const notificationStore = useNotificationStore()
-    
+
     // Handle different types of navigation errors
     if (error instanceof Error) {
       if (error.message.includes('401') || error.message.includes('unauthorized')) {
@@ -240,7 +254,7 @@ router.beforeEach(async (to, from, next) => {
 // Handle navigation errors
 router.onError((error) => {
   console.error('Router navigation error:', error)
-  
+
   // Import notification store dynamically
   import('@/stores/notification').then(({ useNotificationStore }) => {
     const notificationStore = useNotificationStore()

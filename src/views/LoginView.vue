@@ -2,7 +2,7 @@
   <div class="login-container login-page">
     <!-- 科技感动态背景 -->
     <canvas ref="canvasRef" class="tech-background"></canvas>
-    
+
     <div class="login-form">
       <div class="login-header">
         <h2>王定国公益基金会管理系统</h2>
@@ -45,9 +45,9 @@
               @keyup.enter="handleLogin"
             />
             <div class="captcha-image" @click="getCaptcha">
-              <img 
-                v-if="captchaImage" 
-                :src="captchaImage" 
+              <img
+                v-if="captchaImage"
+                :src="captchaImage"
                 alt="验证码"
                 :class="{ loading: captchaLoading }"
               />
@@ -73,13 +73,7 @@
 
         <el-form-item>
           <div class="forgot-password-link">
-            <el-button
-              type="text"
-              size="small"
-              @click="goToForgotPassword"
-            >
-              忘记密码？
-            </el-button>
+            <el-button type="text" size="small" @click="goToForgotPassword"> 忘记密码？ </el-button>
           </div>
         </el-form-item>
       </el-form>
@@ -95,6 +89,7 @@ import { Phone, Lock, Picture } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { authAPI } from '@/api/auth'
 import type { LoginRequest } from '@/types'
+import { getDefaultRouteForRole } from '@/utils/routePermissions'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -155,22 +150,41 @@ const initTechBackground = () => {
   // 绘制多层流动波浪
   const drawWaves = (ctx: CanvasRenderingContext2D, width: number, height: number, t: number) => {
     const waveConfigs = [
-      { amplitude: 50, frequency: 0.008, speed: 1, yOffset: height * 0.7, color: 'rgba(59, 130, 246, 0.08)' },
-      { amplitude: 40, frequency: 0.01, speed: 1.2, yOffset: height * 0.75, color: 'rgba(37, 99, 235, 0.06)' },
-      { amplitude: 60, frequency: 0.006, speed: 0.8, yOffset: height * 0.8, color: 'rgba(30, 64, 175, 0.05)' },
+      {
+        amplitude: 50,
+        frequency: 0.008,
+        speed: 1,
+        yOffset: height * 0.7,
+        color: 'rgba(59, 130, 246, 0.08)',
+      },
+      {
+        amplitude: 40,
+        frequency: 0.01,
+        speed: 1.2,
+        yOffset: height * 0.75,
+        color: 'rgba(37, 99, 235, 0.06)',
+      },
+      {
+        amplitude: 60,
+        frequency: 0.006,
+        speed: 0.8,
+        yOffset: height * 0.8,
+        color: 'rgba(30, 64, 175, 0.05)',
+      },
     ]
 
-    waveConfigs.forEach(config => {
+    waveConfigs.forEach((config) => {
       ctx.beginPath()
       ctx.moveTo(0, height)
-      
+
       for (let x = 0; x <= width; x += 5) {
-        const y = config.yOffset + 
+        const y =
+          config.yOffset +
           Math.sin(x * config.frequency + t * config.speed) * config.amplitude +
           Math.sin(x * config.frequency * 0.5 + t * config.speed * 0.7) * config.amplitude * 0.5
         ctx.lineTo(x, y)
       }
-      
+
       ctx.lineTo(width, height)
       ctx.closePath()
       ctx.fillStyle = config.color
@@ -179,9 +193,14 @@ const initTechBackground = () => {
   }
 
   // 绘制浮动光点
-  const drawFloatingDots = (ctx: CanvasRenderingContext2D, width: number, height: number, t: number) => {
+  const drawFloatingDots = (
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    t: number,
+  ) => {
     const dotCount = 30
-    
+
     for (let i = 0; i < dotCount; i++) {
       const baseX = (i * 137.5) % width
       const baseY = (i * 89.3) % height
@@ -208,12 +227,17 @@ const initTechBackground = () => {
   }
 
   // 绘制几何装饰图形
-  const drawGeometricShapes = (ctx: CanvasRenderingContext2D, width: number, height: number, t: number) => {
+  const drawGeometricShapes = (
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    t: number,
+  ) => {
     // 左上角装饰圆环
     const cx1 = width * 0.1
     const cy1 = height * 0.2
     const r1 = 80 + Math.sin(t) * 10
-    
+
     ctx.beginPath()
     ctx.arc(cx1, cy1, r1, 0, Math.PI * 2)
     ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)'
@@ -256,7 +280,7 @@ const initTechBackground = () => {
     lineGradient.addColorStop(0.3, 'rgba(59, 130, 246, 0.1)')
     lineGradient.addColorStop(0.7, 'rgba(59, 130, 246, 0.1)')
     lineGradient.addColorStop(1, 'rgba(59, 130, 246, 0)')
-    
+
     ctx.beginPath()
     ctx.moveTo(0, lineY)
     ctx.lineTo(width, lineY)
@@ -337,10 +361,10 @@ const handleLogin = async () => {
     await authStore.login(loginForm)
 
     ElMessage.success('登录成功')
-    router.push('/dashboard')
+    router.push(authStore.user ? getDefaultRouteForRole(authStore.user.role) : '/dashboard')
   } catch (error: unknown) {
     console.error('Login failed:', error)
-    
+
     // 如果是验证码错误，刷新验证码
     if (error && typeof error === 'object' && 'response' in error) {
       const httpError = error as { response?: { status?: number } }
@@ -373,13 +397,13 @@ const preventScroll = (e: Event) => {
 // 页面加载时获取验证码
 onMounted(() => {
   getCaptcha()
-  
+
   // 初始化科技感背景动画
   cleanupAnimation = initTechBackground()
-  
+
   // 添加登录页面类到body
   document.body.classList.add('login-page')
-  
+
   // 添加事件监听
   document.addEventListener('focusin', preventScroll)
 })
@@ -388,7 +412,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.body.classList.remove('login-page')
   document.removeEventListener('focusin', preventScroll)
-  
+
   // 清理动画
   if (cleanupAnimation) cleanupAnimation()
 })
@@ -424,7 +448,7 @@ onUnmounted(() => {
   padding: 40px;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
-  box-shadow: 
+  box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.3),
     0 0 40px rgba(64, 158, 255, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -549,12 +573,12 @@ onUnmounted(() => {
   .login-form {
     margin-top: 0;
   }
-  
+
   .captcha-container {
     flex-direction: column;
     gap: 15px;
   }
-  
+
   .captcha-image {
     width: 100%;
     height: 50px;

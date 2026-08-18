@@ -15,7 +15,6 @@ export const useMenuStore = defineStore('menu', () => {
       component: 'Dashboard',
       roles: [
         UserRole.ADMIN,
-        UserRole.BUSINESS_MANAGER,
         UserRole.INITIAL_REVIEWER,
         UserRole.FINAL_REVIEWER,
         UserRole.FINANCE_MANAGER,
@@ -27,7 +26,7 @@ export const useMenuStore = defineStore('menu', () => {
       icon: 'UserFilled',
       path: '/enrollment-management',
       component: 'EnrollmentManagement',
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.INITIAL_REVIEWER],
+      roles: [UserRole.ADMIN, UserRole.INITIAL_REVIEWER],
     },
     {
       id: 'initial-review',
@@ -35,7 +34,7 @@ export const useMenuStore = defineStore('menu', () => {
       icon: 'Document',
       path: '/initial-review',
       component: 'InitialReview',
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.INITIAL_REVIEWER],
+      roles: [UserRole.ADMIN, UserRole.INITIAL_REVIEWER],
     },
     {
       id: 'final-review',
@@ -43,7 +42,7 @@ export const useMenuStore = defineStore('menu', () => {
       icon: 'DocumentChecked',
       path: '/final-review',
       component: 'FinalReview',
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.FINAL_REVIEWER],
+      roles: [UserRole.ADMIN, UserRole.FINAL_REVIEWER],
     },
     {
       id: 'spot-check',
@@ -59,7 +58,7 @@ export const useMenuStore = defineStore('menu', () => {
       icon: 'Money',
       path: '/finance',
       component: 'Finance',
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER, UserRole.FINANCE_MANAGER],
+      roles: [UserRole.ADMIN, UserRole.FINANCE_MANAGER],
     },
     {
       id: 'user-management',
@@ -75,7 +74,7 @@ export const useMenuStore = defineStore('menu', () => {
       icon: 'UserFilled',
       path: '/admin-management',
       component: 'AdminManagement',
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+      roles: [UserRole.ADMIN],
     },
     {
       id: 'login-log',
@@ -83,7 +82,7 @@ export const useMenuStore = defineStore('menu', () => {
       icon: 'Document',
       path: '/login-log',
       component: 'LoginLog',
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+      roles: [UserRole.ADMIN],
     },
     {
       id: 'workload-statistics',
@@ -91,7 +90,7 @@ export const useMenuStore = defineStore('menu', () => {
       icon: 'Histogram',
       path: '/workload-statistics',
       component: 'WorkloadStatistics',
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+      roles: [UserRole.ADMIN],
     },
     {
       id: 'project-management',
@@ -99,7 +98,7 @@ export const useMenuStore = defineStore('menu', () => {
       icon: 'Folder',
       path: '/project-management',
       component: 'ProjectManagement',
-      roles: [UserRole.ADMIN, UserRole.BUSINESS_MANAGER],
+      roles: [UserRole.ADMIN],
     },
   ])
 
@@ -124,7 +123,7 @@ export const useMenuStore = defineStore('menu', () => {
     const authStore = useAuthStore()
     if (!authStore.user) return false
 
-    const menuItem = menuItems.value.find(item => item.id === menuId)
+    const menuItem = menuItems.value.find((item) => item.id === menuId)
     if (!menuItem) return false
 
     return authStore.canAccessRoute(menuItem.roles)

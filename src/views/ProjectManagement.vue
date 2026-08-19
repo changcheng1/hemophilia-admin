@@ -317,7 +317,6 @@
       v-model="riskDialogVisible"
       title="风控管理"
       width="760px"
-      @closed="handleRiskDialogClosed"
     >
       <el-form label-width="110px">
         <el-form-item label="执行时间">
@@ -355,26 +354,6 @@
               value-format="YYYY-MM-DD"
               placeholder="结束日期"
               :disabled-date="disableBeforeDatePickerMinDate"
-            />
-          </div>
-        </el-form-item>
-        <el-form-item label="项目通知">
-          <div v-if="riskDialogVisible" class="rich-editor-wrap">
-            <Toolbar
-              :key="`toolbar-${riskNoticeEditorKey}`"
-              :editor="riskNoticeEditorRef"
-              :default-config="toolbarConfig"
-              mode="default"
-              class="rich-toolbar"
-            />
-            <Editor
-              :key="`editor-${riskNoticeEditorKey}`"
-              v-model="riskForm.projectNotice"
-              :default-config="riskNoticeEditorConfig"
-              mode="default"
-              class="rich-content"
-              @on-created="handleRiskNoticeEditorCreated"
-              @on-blur="syncRiskNoticeFromEditor"
             />
           </div>
         </el-form-item>
@@ -444,8 +423,6 @@ const descriptionEditorRef = shallowRef<IDomEditor>()
 const editorKey = ref(0)
 const projectNoticeEditorRef = shallowRef<IDomEditor>()
 const projectNoticeEditorKey = ref(0)
-const riskNoticeEditorRef = shallowRef<IDomEditor>()
-const riskNoticeEditorKey = ref(0)
 
 const provinceOptions = [
   '北京市',
@@ -527,7 +504,6 @@ const riskForm = ref({
   executionEndDate: '',
   enrollmentStartDate: '',
   enrollmentEndDate: '',
-  projectNotice: '',
   isThreeElementEnabled: false,
   isHouseholdLocationEnabled: false,
   isMedicalInsuranceLocationEnabled: false,
@@ -549,9 +525,6 @@ const editorConfig: Partial<IEditorConfig> = {
   placeholder: '请输入将在用户端项目页面展示的项目说明',
 }
 const projectNoticeEditorConfig: Partial<IEditorConfig> = {
-  placeholder: '请输入将在用户端项目通知页展示的项目通知',
-}
-const riskNoticeEditorConfig: Partial<IEditorConfig> = {
   placeholder: '请输入将在用户端项目通知页展示的项目通知',
 }
 
@@ -748,25 +721,6 @@ const handleProjectNoticeEditorCreated = (editor: IDomEditor) => {
   projectNoticeEditorRef.value = editor
   nextTick(() => {
     editor.setHtml(projectForm.value.projectNotice || '')
-  })
-}
-
-const syncRiskNoticeFromEditor = () => {
-  riskForm.value.projectNotice = sanitizeRichText(riskForm.value.projectNotice)
-}
-
-const destroyRiskNoticeEditor = () => {
-  riskNoticeEditorRef.value?.destroy()
-  riskNoticeEditorRef.value = undefined
-}
-
-const handleRiskNoticeEditorCreated = (editor: IDomEditor) => {
-  if (riskNoticeEditorRef.value && riskNoticeEditorRef.value !== editor) {
-    riskNoticeEditorRef.value.destroy()
-  }
-  riskNoticeEditorRef.value = editor
-  nextTick(() => {
-    editor.setHtml(riskForm.value.projectNotice || '')
   })
 }
 
@@ -1074,25 +1028,18 @@ const saveProvinces = async () => {
 }
 
 const openRiskDialog = (row: Project) => {
-  destroyRiskNoticeEditor()
   currentProjectId.value = row.id
   riskForm.value = {
     executionStartDate: normalizeBusinessDate(row.executionStartDate),
     executionEndDate: normalizeBusinessDate(row.executionEndDate),
     enrollmentStartDate: normalizeBusinessDate(row.enrollmentStartDate),
     enrollmentEndDate: normalizeBusinessDate(row.enrollmentEndDate),
-    projectNotice: normalizeOptionalRichText(row.projectNotice) || '',
     isThreeElementEnabled: !!row.isThreeElementEnabled,
     isHouseholdLocationEnabled: !!row.isHouseholdLocationEnabled,
     isMedicalInsuranceLocationEnabled: !!row.isMedicalInsuranceLocationEnabled,
     isTreatmentLocationEnabled: !!row.isTreatmentLocationEnabled,
   }
-  riskNoticeEditorKey.value += 1
   riskDialogVisible.value = true
-}
-
-const handleRiskDialogClosed = () => {
-  destroyRiskNoticeEditor()
 }
 
 const saveRiskControl = async () => {
@@ -1120,7 +1067,6 @@ const saveRiskControl = async () => {
       executionEndDate: riskForm.value.executionEndDate || null,
       enrollmentStartDate: riskForm.value.enrollmentStartDate || null,
       enrollmentEndDate: riskForm.value.enrollmentEndDate || null,
-      projectNotice: normalizeOptionalRichText(riskForm.value.projectNotice),
       isThreeElementEnabled: riskForm.value.isThreeElementEnabled,
       isHouseholdLocationEnabled: riskForm.value.isHouseholdLocationEnabled,
       isMedicalInsuranceLocationEnabled: riskForm.value.isMedicalInsuranceLocationEnabled,
@@ -1142,7 +1088,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   destroyDescriptionEditor()
   destroyProjectNoticeEditor()
-  destroyRiskNoticeEditor()
 })
 </script>
 

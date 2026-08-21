@@ -5,6 +5,7 @@ import { enrollmentAPI, type EnrollmentListItem } from '@/api/enrollment'
 import { projectApi, type Project } from '@/api/project'
 import { normalizeFileUrl } from '@/utils/fileHandler'
 import { getThreeElementVerificationText } from '@/utils/threeElementVerification'
+import { formatBusinessDateTime } from '@/utils/dateTime'
 
 const loading = ref(false)
 const rows = ref<EnrollmentListItem[]>([])
@@ -193,7 +194,7 @@ onMounted(load)
         <el-table-column prop="idType" label="证件类型" min-width="100" />
         <el-table-column prop="idNumber" label="证件号码" min-width="180" show-overflow-tooltip />
         <el-table-column label="申请状态" min-width="110"><template #default="{ row }"><el-tag :type="statusType[row.status]">{{ statusLabel[row.status] || row.status }}</el-tag></template></el-table-column>
-        <el-table-column label="申请时间" min-width="170"><template #default="{ row }">{{ row.submittedAt || row.createdAt }}</template></el-table-column>
+        <el-table-column label="申请时间" min-width="170"><template #default="{ row }">{{ formatBusinessDateTime(row.submittedAt || row.createdAt) }}</template></el-table-column>
         <el-table-column label="操作" width="270" fixed="right"><template #default="{ row }"><div class="action-buttons"><el-button type="info" size="small" @click="showDetail(row)">查看</el-button><el-button v-if="row.status === 'pending_review'" type="primary" size="small" @click="showReview(row)">审核</el-button><el-button v-if="row.status === 'approved' || row.status === 'rejected'" type="warning" size="small" @click="resetEnrollment(row)">重置入组状态</el-button></div></template></el-table-column>
       </el-table>
       <div class="pagination-container"><el-pagination v-model:current-page="query.page" v-model:page-size="query.limit" :page-sizes="[10, 20, 50, 100]" :total="total" layout="total, sizes, prev, pager, next, jumper" @size-change="handlePageSize" @current-change="handlePage" /></div>
@@ -227,8 +228,8 @@ onMounted(load)
             <el-descriptions-item label="手机号">{{ current.user?.phone || '-' }}</el-descriptions-item>
             <el-descriptions-item label="患者姓名">{{ current.recipientName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="证件号码">{{ current.idNumber || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="提交时间">{{ current.submittedAt || current.createdAt || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="审核时间">{{ current.reviewedAt || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="提交时间">{{ formatBusinessDateTime(current.submittedAt || current.createdAt) }}</el-descriptions-item>
+            <el-descriptions-item label="审核时间">{{ formatBusinessDateTime(current.reviewedAt) }}</el-descriptions-item>
           </el-descriptions>
         </section>
 

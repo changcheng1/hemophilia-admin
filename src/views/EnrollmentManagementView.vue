@@ -234,6 +234,16 @@ onMounted(load)
         </section>
 
         <section class="detail-section">
+          <h3>监护人信息</h3>
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="与患者关系">{{ current.guardianRelationship || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="监护人姓名">{{ current.guardianName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="证件类型">{{ current.guardianIdType || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="证件号码">{{ current.guardianIdNumber || '-' }}</el-descriptions-item>
+          </el-descriptions>
+        </section>
+
+        <section class="detail-section">
           <h3>就医与支付信息</h3>
           <el-descriptions :column="2" border>
             <el-descriptions-item label="就诊区域">{{ current.treatmentArea || current.treatmentLocation || '-' }}</el-descriptions-item>
